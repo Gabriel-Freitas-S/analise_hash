@@ -1,0 +1,22 @@
+# Arquivos de compilação do CMake
+cmake-build-*/
+
+# Arquivos de projeto do CLion
+.idea/
+
+# Binários e executáveis
+*.exe
+*.out
+*.so
+
+# Arquivos de objeto
+*.o
+*.obj
+
+# Bibliotecas
+*.a
+*.lib
+
+# Outros
+*.swp
+*~
