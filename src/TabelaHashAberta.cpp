@@ -1,70 +1,82 @@
 #include "TabelaHashAberta.hpp"
+#include <cmath>
 
-// Construtor: inicializa a tabela com um tamanho específico
-TabelaHashAberta::TabelaHashAberta(int tamanhoTabela) : tamanho(tamanhoTabela) {
-    tabela.resize(tamanho, -1); // Inicializa com -1 para indicar posições vazias
-    posicoesOcupadas.resize(tamanho, false);
-}
-
-// Função de hash usando o método da divisão
-int TabelaHashAberta::funcaoHashDivisao(int chave) {
-    return chave % tamanho;
-}
-
-// Função de hash usando o método da multiplicação
-int TabelaHashAberta::funcaoHashMultiplicacao(int chave) {
-    const double c = 0.63274838;
-    double val = chave * c;
-    double parteFracionaria = val - static_cast<int>(val);
-    return static_cast<int>(tamanho * parteFracionaria);
-}
-
-// Insere uma chave na tabela hash usando sondagem linear
-void TabelaHashAberta::inserir(int chave, bool usarMultiplicacao) {
-    int indice;
-    if (usarMultiplicacao) {
-        indice = funcaoHashMultiplicacao(chave);
-    } else {
-        indice = funcaoHashDivisao(chave);
+TabelaHashAberta::TabelaHashAberta(size_t tam) 
+    : tamanho(tam), numElementos(0) {
+    if (tam == 0) {
+        throw std::invalid_argument("Tamanho da tabela deve ser maior que zero");
     }
-
-    // Sondagem linear para encontrar uma posição livre
-    while (posicoesOcupadas[indice]) {
-        indice = (indice + 1) % tamanho;
-    }
-
-    tabela[indice] = chave;
-    posicoesOcupadas[indice] = true;
+    tabela.resize(tamanho);
 }
 
-// Busca uma chave na tabela hash
-bool TabelaHashAberta::buscar(int chave, bool usarMultiplicacao) {
-    int indice;
-    if (usarMultiplicacao) {
-        indice = funcaoHashMultiplicacao(chave);
-    } else {
-        indice = funcaoHashDivisao(chave);
-    }
+size_t TabelaHashAberta::calcularHashDivisao(int chave) const {
+    return static_cast<size_t>(std::abs(chave)) % tamanho;
+}
 
-    int indiceOriginal = indice;
+size_t TabelaHashAberta::calcularHashMultiplicacao(int chave) const {
+    double produto = std::abs(chave) * CONSTANTE_MULTIPLICACAO;
+    double fracao = produto - std::floor(produto);
+    return static_cast<size_t>(std::floor(fracao * tamanho));
+}
 
-    // Procura pela chave a partir do índice inicial
-    while (posicoesOcupadas[indice]) {
-        if (tabela[indice] == chave) {
-            return true; // Chave encontrada
+size_t TabelaHashAberta::sondagemLinear(size_t indiceInicial, int valor) const {
+    size_t tentativas = 0;
+    size_t indice = indiceInicial;
+    
+    while (tentativas < tamanho) {
+        if (tabela[indice].estado == Celula::Estado::VAZIO || 
+            tabela[indice].estado == Celula::Estado::REMOVIDO ||
+            (tabela[indice].estado == Celula::Estado::OCUPADO && 
+             tabela[indice].valor == valor)) {
+            return indice;
         }
         indice = (indice + 1) % tamanho;
-
-        // Se voltou ao início, a chave não está na tabela
-        if (indice == indiceOriginal) {
-            break;
-        }
+        ++tentativas;
     }
-
-    return false; // Chave não encontrada
+    
+    throw std::runtime_error("Tabela cheia - não foi possível inserir");
 }
 
-// Retorna o tamanho da tabela
-int TabelaHashAberta::getTamanho() const {
-    return tamanho;
+void TabelaHashAberta::inserir(int valor, TipoHash tipo) {
+    if (fatorCarga() >= MAX_FATOR_CARGA) {
+        throw std::runtime_error("Fator de carga muito alto");
+    }
+    
+    size_t indiceInicial = (tipo == TipoHash::DIVISAO) 
+        ? calcularHashDivisao(valor) 
+        : calcularHashMultiplicacao(valor);
+    
+    size_t indice = sondagemLinear(indiceInicial, valor);
+    
+    // Não inserir duplicatas
+    if (tabela[indice].estado == Celula::Estado::OCUPADO && 
+        tabela[indice].valor == valor) {
+        return;
+    }
+    
+    if (tabela[indice].estado != Celula::Estado::OCUPADO) {
+        tabela[indice] = Celula(valor);
+        ++numElementos;
+    }
+}
+
+bool TabelaHashAberta::buscar(int valor, TipoHash tipo) const {
+    size_t indiceInicial = (tipo == TipoHash::DIVISAO) 
+        ? calcularHashDivisao(valor) 
+        : calcularHashMultiplicacao(valor);
+    
+    size_t tentativas = 0;
+    size_t indice = indiceInicial;
+    
+    while (tentativas < tamanho && 
+           tabela[indice].estado != Celula::Estado::VAZIO) {
+        if (tabela[indice].estado == Celula::Estado::OCUPADO && 
+            tabela[indice].valor == valor) {
+            return true;
+        }
+        indice = (indice + 1) % tamanho;
+        ++tentativas;
+    }
+    
+    return false;
 }
