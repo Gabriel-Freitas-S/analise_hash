@@ -1,53 +1,51 @@
 #include "TabelaHashEncadeada.hpp"
+#include <cmath>
 
-// Construtor: inicializa a tabela com um tamanho específico
-TabelaHashEncadeada::TabelaHashEncadeada(int tamanhoTabela) : tamanho(tamanhoTabela) {
+TabelaHashEncadeada::TabelaHashEncadeada(size_t tam) 
+    : tamanho(tam), numElementos(0) {
+    if (tam == 0) {
+        throw std::invalid_argument("Tamanho da tabela deve ser maior que zero");
+    }
     tabela.resize(tamanho);
 }
 
-// Função de hash usando o método da divisão
-int TabelaHashEncadeada::funcaoHashDivisao(int chave) {
-    return chave % tamanho;
+size_t TabelaHashEncadeada::calcularHashDivisao(int chave) const {
+    return static_cast<size_t>(std::abs(chave)) % tamanho;
 }
 
-// Função de hash usando o método da multiplicação
-int TabelaHashEncadeada::funcaoHashMultiplicacao(int chave) {
-    const double c = 0.63274838;
-    double val = chave * c;
-    double parteFracionaria = val - static_cast<int>(val);
-    return static_cast<int>(tamanho * parteFracionaria);
+size_t TabelaHashEncadeada::calcularHashMultiplicacao(int chave) const {
+    double produto = std::abs(chave) * CONSTANTE_MULTIPLICACAO;
+    double fracao = produto - std::floor(produto);
+    return static_cast<size_t>(std::floor(fracao * tamanho));
 }
 
-// Insere uma chave na tabela hash
-void TabelaHashEncadeada::inserir(int chave, bool usarMultiplicacao) {
-    int indice;
-    if (usarMultiplicacao) {
-        indice = funcaoHashMultiplicacao(chave);
-    } else {
-        indice = funcaoHashDivisao(chave);
+void TabelaHashEncadeada::inserir(int valor, TipoHash tipo) {
+    size_t indice = (tipo == TipoHash::DIVISAO) 
+        ? calcularHashDivisao(valor) 
+        : calcularHashMultiplicacao(valor);
+    
+    // Verificar se já existe
+    if (buscar(valor, tipo)) {
+        return; // Não inserir duplicatas
     }
-    tabela[indice].push_back({chave});
+    
+    auto novoNo = std::make_unique<No>(valor);
+    novoNo->proximo = std::move(tabela[indice]);
+    tabela[indice] = std::move(novoNo);
+    ++numElementos;
 }
 
-// Busca uma chave na tabela hash
-bool TabelaHashEncadeada::buscar(int chave, bool usarMultiplicacao) {
-    int indice;
-    if (usarMultiplicacao) {
-        indice = funcaoHashMultiplicacao(chave);
-    } else {
-        indice = funcaoHashDivisao(chave);
-    }
-
-    // Percorre a lista encadeada no índice correspondente
-    for (const auto& no : tabela[indice]) {
-        if (no.chave == chave) {
-            return true; // Chave encontrada
+bool TabelaHashEncadeada::buscar(int valor, TipoHash tipo) const {
+    size_t indice = (tipo == TipoHash::DIVISAO) 
+        ? calcularHashDivisao(valor) 
+        : calcularHashMultiplicacao(valor);
+    
+    const No* atual = tabela[indice].get();
+    while (atual != nullptr) {
+        if (atual->valor == valor) {
+            return true;
         }
+        atual = atual->proximo.get();
     }
-    return false; // Chave não encontrada
-}
-
-// Retorna o tamanho da tabela
-int TabelaHashEncadeada::getTamanho() const {
-    return tamanho;
+    return false;
 }
