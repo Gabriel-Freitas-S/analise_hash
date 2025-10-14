@@ -5,6 +5,13 @@
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen.svg)](#)
 
+## 👤 Autores
+
+- Gabriel Freitas Souza ([GitHub](https://github.com/Gabriel-Freitas-S))
+- Roberli Schuina Silva ([GitHub](https://github.com/RoberliSchuina))
+
+Trabalho desenvolvido em dupla para a disciplina de Pesquisa e Ordenação.
+
 ## 🎯 Visão Geral
 
 Este projeto, desenvolvido para a disciplina de **Pesquisa e Ordenação**, implementa e analisa comparativamente diferentes soluções de hashing. O objetivo é explorar mecanismos distintos para tratar colisões em tabelas hash, avaliando o desempenho de cada abordagem em cenários variados.
