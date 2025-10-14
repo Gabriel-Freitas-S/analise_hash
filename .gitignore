@@ -1,22 +1,230 @@
-# Arquivos de compilação do CMake
+# ==============================================
+# .gitignore para Projeto C++ com CMake
+# ==============================================
+
+# Arquivos de Build CMake
+build/
+build-*/
+Build/
+Build-*/
 cmake-build-*/
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+Testing/
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
 
-# Arquivos de projeto do CLion
-.idea/
-
-# Binários e executáveis
+# Arquivos executáveis
 *.exe
 *.out
-*.so
-
-# Arquivos de objeto
+*.app
 *.o
-*.obj
-
-# Bibliotecas
+*.so
+*.dylib
+*.dll
 *.a
 *.lib
+analise_hash
+analise_hash.exe
 
-# Outros
-*.swp
+# Arquivos de Debug
+*.pdb
+*.ilk
+*.exp
+*.map
+*.dSYM/
+*.su
+*.idb
+*.obj
+
+# Diretórios de saída
+bin/
+lib/
+dist/
+release/
+debug/
+Debug/
+Release/
+RelWithDebInfo/
+MinSizeRel/
+
+# Arquivos de resultado/saída
+*.csv
+*.log
+*.txt.bak
+resultados_*.csv
+benchmark_*.csv
+log_*.txt
+temp_*
+
+# Arquivos IDE - Visual Studio
+.vs/
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.sln
+*.user
+*.aps
+*.pch
+*.vspscc
+*_i.c
+*_p.c
+*.ncb
+*.suo
+*.tlb
+*.tlh
+*.bak
+*.cache
+*.res
+*.sbr
+*.tmp
+
+# Arquivos IDE - CLion/IntelliJ
+.idea/
+cmake-build-*/
+*.iws
+*.iml
+out/
+
+# Arquivos IDE - Xcode
+*.xcodeproj/
+*.xcworkspace/
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+xcuserdata/
+*.moved-aside
+DerivedData/
+*.hmap
+*.ipa
+
+# Arquivos IDE - Code::Blocks
+*.cbp
+*.layout
+*.depend
+
+# Arquivos IDE - Dev-C++
+*.dev
+
+# Arquivos IDE - Eclipse CDT
+.cproject
+.project
+.settings/
+
+# Arquivos IDE - Qt Creator
+CMakeLists.txt.user*
+
+# Arquivos de Profile
+*.gprof
+gmon.out
+callgrind.out.*
+*.gcda
+*.gcno
+*.gcov
+
+# Arquivos de Valgrind
+*.memcheck
+*.helgrind
+*.drd
+vgcore.*
+
+# Arquivos de Backup
 *~
+*.swp
+*.swo
+*#
+.#*
+
+# Arquivos de Sistema
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini
+Thumbs.db
+
+# Arquivos de Patch
+*.orig
+*.rej
+*.patch
+
+# Arquivos temporários
+*.tmp
+*.temp
+*_temp
+*_tmp
+
+# Diretórios de cache
+.cache/
+cache/
+
+# Arquivos de documentação gerada
+docs/html/
+docs/latex/
+Doxyfile.bak
+
+# Arquivos de cobertura de código
+coverage/
+*.info
+lcov-report/
+
+# Arquivos de sanitizer
+*.san
+
+# Diretórios de instalação
+install/
+Install/
+
+# Arquivos de packaging
+*.tar.gz
+*.tgz
+*.zip
+*.7z
+*.rar
+
+# ==============================================
+# Arquivos específicos do projeto
+# ==============================================
+
+# Resultados de benchmark
+benchmark_results/
+results/
+*.benchmark
+
+# Arquivos de dados temporários (manter os originais)
+data/*_temp.txt
+data/*_generated.txt
+data/busca_*.txt
+
+# Arquivos de teste
+test_output/
+test_results/
+
+# Scripts de build personalizado
+build.sh.bak
+build.bat.bak
+
+# ==============================================
+# Exceções - arquivos que devem ser mantidos
+# ==============================================
+
+# Manter arquivos de dados originais
+!data/numeros_aleatorios_*.txt
+
+# Manter scripts importantes
+!build.sh
+!build.bat
+
+# Manter arquivos de configuração
+!.clang-format
+!.clang-tidy
+
+# ==============================================
+# Fim do arquivo .gitignore
+# ==============================================
