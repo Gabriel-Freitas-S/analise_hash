@@ -2,24 +2,19 @@
 
 #include <vector>
 #include <string>
-#include <random>
 #include <fstream>
 #include <stdexcept>
 
 /**
- * @brief Classe responsável por gerar e gerenciar conjuntos de dados para testes
+ * @brief Classe responsável por carregar dados de arquivos de texto
  * 
  * Esta classe fornece funcionalidades para:
- * - Gerar números aleatórios com distribuição uniforme
- * - Salvar dados em arquivos de texto no formato especificado
- * - Carregar dados de arquivos existentes
- * - Validar e garantir a integridade dos dados
+ * - Carregar dados de arquivos existentes na pasta data/
+ * - Validar a integridade dos arquivos
+ * - Listar arquivos disponíveis
  */
 class GeradorDados {
 private:
-    std::mt19937 gerador;                    ///< Gerador Mersenne Twister para números aleatórios
-    std::uniform_int_distribution<int> distribuicao; ///< Distribuição uniforme
-    
     /**
      * @brief Valida se um arquivo existe e pode ser lido
      * @param nomeArquivo Caminho do arquivo a ser validado
@@ -36,50 +31,15 @@ private:
 
 public:
     /**
-     * @brief Construtor padrão com seed configurável
-     * @param seed Semente para o gerador aleatório (padrão: dispositivo aleatório)
-     * @param minimo Valor mínimo para geração (padrão: 1)
-     * @param maximo Valor máximo para geração (padrão: 1.000.000)
+     * @brief Construtor padrão
      */
-    explicit GeradorDados(unsigned int seed = std::random_device{}(),
-                          int minimo = 1,
-                          int maximo = 1000000);
-    
-    /**
-     * @brief Gera um vetor de números aleatórios únicos
-     * @param quantidade Número de elementos a gerar
-     * @return Vetor com números aleatórios
-     * @throws std::invalid_argument se quantidade for inválida
-     */
-    std::vector<int> gerarNumerosAleatorios(size_t quantidade);
-    
-    /**
-     * @brief Gera números aleatórios com possibilidade de repetição
-     * @param quantidade Número de elementos a gerar
-     * @return Vetor com números aleatórios
-     */
-    std::vector<int> gerarNumerosAleatoriosComRepeticao(size_t quantidade);
-    
-    /**
-     * @brief Salva um vetor de números em arquivo de texto
-     * 
-     * Formato do arquivo:
-     * - Primeira linha: quantidade de números
-     * - Linhas seguintes: um número por linha
-     * 
-     * @param numeros Vetor de números a salvar
-     * @param nomeArquivo Caminho do arquivo de saída
-     * @return true se salvo com sucesso, false caso contrário
-     * @throws std::runtime_error se não conseguir criar o arquivo
-     */
-    bool salvarEmArquivo(const std::vector<int>& numeros, 
-                         const std::string& nomeArquivo);
+    GeradorDados() = default;
     
     /**
      * @brief Carrega números de um arquivo de texto
      * 
      * Formato esperado:
-     * - Primeira linha: quantidade de números (validado)
+     * - Primeira linha: quantidade de números (opcional, usado para validação)
      * - Linhas seguintes: um número por linha
      * 
      * @param nomeArquivo Caminho do arquivo de entrada
@@ -89,40 +49,21 @@ public:
     std::vector<int> carregarDeArquivo(const std::string& nomeArquivo);
     
     /**
-     * @brief Gera todos os arquivos de dados necessários para o trabalho
-     * 
-     * Cria os arquivos:
-     * - numeros_100.txt
-     * - numeros_500.txt
-     * - numeros_1000.txt
-     * - numeros_5000.txt
-     * - numeros_10000.txt
-     * - numeros_50000.txt
-     * - busca_1000.txt
-     * 
-     * @param diretorio Diretório onde os arquivos serão salvos (padrão: "data/")
-     * @throws std::runtime_error se não conseguir criar os arquivos
-     */
-    void gerarArquivosTrabalho(const std::string& diretorio = "data/");
-    
-    /**
-     * @brief Redefine a seed do gerador aleatório
-     * @param novaSeed Nova seed a ser utilizada
-     */
-    void redefinirSeed(unsigned int novaSeed);
-    
-    /**
-     * @brief Redefine o intervalo de geração de números
-     * @param minimo Novo valor mínimo
-     * @param maximo Novo valor máximo
-     * @throws std::invalid_argument se minimo >= maximo
-     */
-    void redefinirIntervalo(int minimo, int maximo);
-    
-    /**
      * @brief Valida a estrutura de um arquivo de dados
      * @param nomeArquivo Arquivo a ser validado
      * @return true se o arquivo está no formato correto
      */
     bool validarArquivo(const std::string& nomeArquivo) const;
+    
+    /**
+     * @brief Lista todos os arquivos disponíveis na pasta data/
+     * @return Vetor com os caminhos dos arquivos encontrados
+     */
+    std::vector<std::string> listarArquivosDisponiveis() const;
+    
+    /**
+     * @brief Obtém estatísticas básicas de um arquivo
+     * @param nomeArquivo Caminho do arquivo
+     */
+    void exibirEstatisticas(const std::string& nomeArquivo) const;
 };
