@@ -145,6 +145,14 @@ public:
     }
 };
 
+static void pause_console() {
+#ifdef _WIN32
+    std::cout << "\nPressione ENTER para sair...";
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    std::cin.get();
+#endif
+}
+
 int main(int /*argc*/, char* /*argv*/[]) {
     try {
         std::cout << "\n" << std::string(60, '=') << std::endl;
@@ -187,13 +195,16 @@ int main(int /*argc*/, char* /*argv*/[]) {
         benchmark.salvarResultados("resultados_benchmark.csv");
 
         std::cout << "\nAnalise concluida com sucesso!\n" << std::endl;
+        pause_console();
         return 0;
 
     } catch (const std::exception& e) {
         std::cerr << "Erro critico: " << e.what() << std::endl;
+        pause_console();
         return 1;
     } catch (...) {
         std::cerr << "Erro desconhecido ocorreu." << std::endl;
+        pause_console();
         return 1;
     }
 }
