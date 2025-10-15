@@ -18,8 +18,8 @@ option(ENABLE_WARNINGS "Habilitar warnings adicionais" ON)
 # Flags específicas para tornar o executável mais portável em Windows
 if(WIN32)
     if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-        # Link estático de libgcc e libstdc++ (MinGW)
-        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++")
+        # Linkagem estática das libs C++/gcc e pthread (quando disponível)
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static -static-libgcc -static-libstdc++ -Wl,-Bstatic -lpthread -Wl,-Bdynamic")
     elseif(MSVC)
         # Runtime estático (/MT) em Release
         string(REPLACE "/MD" "/MT" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
