@@ -7,9 +7,9 @@
 #include <algorithm>
 #include <stdexcept>
 
-#include "TabelaHashEncadeada.hpp"
-#include "TabelaHashAberta.hpp"
-#include "GeradorDados.hpp"
+#include "TabelaEncadeada.hpp"
+#include "TabelaAberta.hpp"
+#include "CarregadorDados.hpp"
 
 struct ResultadoTeste {
     std::string tipoTabela;
@@ -35,7 +35,7 @@ private:
         return duracao.count() / 1000.0;
     }
 
-    size_t contarColisoesEncadeada(const TabelaHashEncadeada& tabela) {
+    size_t contarColisoesEncadeada(const TabelaEncadeada& tabela) {
         size_t elementos = tabela.getNumElementos();
         size_t tamanho = tabela.getTamanho();
         if (elementos <= tamanho) return 0;
@@ -43,7 +43,7 @@ private:
         return static_cast<size_t>(elementos - tamanho * (1 - std::exp(-lambda)));
     }
 
-    size_t contarColisoesAberta(const TabelaHashAberta& tabela) {
+    size_t contarColisoesAberta(const TabelaAberta& tabela) {
         size_t elementos = tabela.getNumElementos();
         size_t tamanho = tabela.getTamanho();
         if (elementos <= tamanho) {
@@ -60,15 +60,15 @@ public:
         std::cout << "  Testando tabela encadeada (tamanho: " << tamanhoTabela << ")...";
 
         {
-            TabelaHashEncadeada tabela(tamanhoTabela);
-            double tempoInsercao = medirTempo([&]() { for (int v : dados) tabela.inserir(v, TabelaHashEncadeada::TipoHash::DIVISAO); });
-            double tempoBusca = medirTempo([&]() { for (int v : dadosBusca) tabela.buscar(v, TabelaHashEncadeada::TipoHash::DIVISAO); });
+            TabelaEncadeada tabela(tamanhoTabela);
+            double tempoInsercao = medirTempo([&]() { for (int v : dados) tabela.inserir(v, TabelaEncadeada::TipoHash::DIVISAO); });
+            double tempoBusca = medirTempo([&]() { for (int v : dadosBusca) tabela.buscar(v, TabelaEncadeada::TipoHash::DIVISAO); });
             resultados.push_back({"Encadeada", tamanhoTabela, dados.size(), "Divisao", tempoInsercao, tempoBusca, contarColisoesEncadeada(tabela), tabela.fatorCarga()});
         }
         {
-            TabelaHashEncadeada tabela(tamanhoTabela);
-            double tempoInsercao = medirTempo([&]() { for (int v : dados) tabela.inserir(v, TabelaHashEncadeada::TipoHash::MULTIPLICACAO); });
-            double tempoBusca = medirTempo([&]() { for (int v : dadosBusca) tabela.buscar(v, TabelaHashEncadeada::TipoHash::MULTIPLICACAO); });
+            TabelaEncadeada tabela(tamanhoTabela);
+            double tempoInsercao = medirTempo([&]() { for (int v : dados) tabela.inserir(v, TabelaEncadeada::TipoHash::MULTIPLICACAO); });
+            double tempoBusca = medirTempo([&]() { for (int v : dadosBusca) tabela.buscar(v, TabelaEncadeada::TipoHash::MULTIPLICACAO); });
             resultados.push_back({"Encadeada", tamanhoTabela, dados.size(), "Multiplicacao", tempoInsercao, tempoBusca, contarColisoesEncadeada(tabela), tabela.fatorCarga()});
         }
         std::cout << " OK" << std::endl;
@@ -79,23 +79,23 @@ public:
         const size_t TAM = 50009;
         std::cout << "  Testando tabela aberta (tamanho: " << TAM << ")...";
         {
-            TabelaHashAberta tabela(TAM);
+            TabelaAberta tabela(TAM);
             double tempoInsercao = medirTempo([&]() {
                 for (int v : dados) {
-                    try { tabela.inserir(v, TabelaHashAberta::TipoHash::DIVISAO); } catch (...) { break; }
+                    try { tabela.inserir(v, TabelaAberta::TipoHash::DIVISAO); } catch (...) { break; }
                 }
             });
-            double tempoBusca = medirTempo([&]() { for (int v : dadosBusca) tabela.buscar(v, TabelaHashAberta::TipoHash::DIVISAO); });
+            double tempoBusca = medirTempo([&]() { for (int v : dadosBusca) tabela.buscar(v, TabelaAberta::TipoHash::DIVISAO); });
             resultados.push_back({"Aberta", TAM, tabela.getNumElementos(), "Divisao", tempoInsercao, tempoBusca, contarColisoesAberta(tabela), tabela.fatorCarga()});
         }
         {
-            TabelaHashAberta tabela(TAM);
+            TabelaAberta tabela(TAM);
             double tempoInsercao = medirTempo([&]() {
                 for (int v : dados) {
-                    try { tabela.inserir(v, TabelaHashAberta::TipoHash::MULTIPLICACAO); } catch (...) { break; }
+                    try { tabela.inserir(v, TabelaAberta::TipoHash::MULTIPLICACAO); } catch (...) { break; }
                 }
             });
-            double tempoBusca = medirTempo([&]() { for (int v : dadosBusca) tabela.buscar(v, TabelaHashAberta::TipoHash::MULTIPLICACAO); });
+            double tempoBusca = medirTempo([&]() { for (int v : dadosBusca) tabela.buscar(v, TabelaAberta::TipoHash::MULTIPLICACAO); });
             resultados.push_back({"Aberta", TAM, tabela.getNumElementos(), "Multiplicacao", tempoInsercao, tempoBusca, contarColisoesAberta(tabela), tabela.fatorCarga()});
         }
         std::cout << " OK" << std::endl;
@@ -159,7 +159,7 @@ int main(int /*argc*/, char* /*argv*/[]) {
         std::cout << "ANALISE COMPARATIVA DE TABELAS HASH" << std::endl;
         std::cout << std::string(60, '=') << std::endl;
 
-        GeradorDados gerador;
+        CarregadorDados carregador;
         BenchmarkManager benchmark;
 
         const std::vector<size_t> TAM_TABELA_ENCADEADA = {29, 97, 251, 499, 911};
@@ -173,13 +173,13 @@ int main(int /*argc*/, char* /*argv*/[]) {
         };
 
         std::cout << "\nGerando dados para busca (1000 numeros aleatorios)...";
-        auto dadosBusca = gerador.gerarNumerosAleatoriosComRepeticao(1000);
+        auto dadosBusca = carregador.gerarNumerosAleatoriosComRepeticao(1000);
         std::cout << " OK\n";
 
         for (const std::string& arquivo : ARQS) {
             try {
                 std::cout << "\nCarregando dados de: " << arquivo << std::endl;
-                auto dados = gerador.carregarDeArquivo(arquivo);
+                auto dados = carregador.carregarDeArquivo(arquivo);
                 std::cout << "Executando testes com " << dados.size() << " elementos:" << std::endl;
                 for (size_t tamanho : TAM_TABELA_ENCADEADA) {
                     benchmark.testarTabelaEncadeada(dados, dadosBusca, tamanho);
