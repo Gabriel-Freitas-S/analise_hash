@@ -127,209 +127,144 @@
 └── CMakeLists.txt</code></pre>
 
       <div class="code-section">
-        <h3>TabelaHashEncadeada.hpp</h3>
+        <h3>TabelaHashEncadeada.hpp/.cpp</h3>
         <div class="explanation">
-          <p><b>Propósito:</b> Define a interface da tabela hash com encadeamento. Cada posição da tabela mantém uma lista encadeada de elementos que colidiram no mesmo índice.</p>
+          <p><b>Propósito:</b> Define e implementa a tabela hash com encadeamento. Cada posição armazena uma lista encadeada de colisões. Evita duplicatas, calcula fator de carga e provê estatísticas de distribuição.</p>
         </div>
         
         <h4>Estrutura do Nó</h4>
         <pre><code class="language-cpp">struct No {
   int valor;                           // Valor armazenado
-  std::unique_ptr&lt;No&gt; proximo;        // Ponteiro para próximo nó
-  
+  std::unique_ptr&lt;No&gt; proximo;        // Próximo elemento na lista
   explicit No(int val) : valor(val), proximo(nullptr) {}
 };</code></pre>
         <div class="explanation">
-          <p><b>Explicação:</b> Cada nó da lista contém um valor inteiro e um ponteiro inteligente para o próximo nó. O uso de <code>unique_ptr</code> garante gerenciamento automático de memória e evita vazamentos.</p>
+          <p><b>Memória:</b> <code>unique_ptr</code> elimina necessidade de <code>delete</code>, evitando vazamentos. Listas são desalocadas automaticamente.</p>
         </div>
 
-        <h4>Funções Hash Implementadas</h4>
-        <pre><code class="language-cpp">// Método da Divisão: simples e eficiente
+        <h4>Funções de Hash</h4>
+        <pre><code class="language-cpp">// Divisão (usa números primos para melhor distribuição)
 size_t calcularHashDivisao(int chave) const {
   return static_cast&lt;size_t&gt;(std::abs(chave)) % tamanho;
 }
-
-// Método da Multiplicação: melhor distribuição
+// Multiplicação (fração áurea)
 size_t calcularHashMultiplicacao(int chave) const {
-  static constexpr double CONSTANTE = 0.6180339887;  // Fração áurea
-  double produto = std::abs(chave) * CONSTANTE;
-  double fracao = produto - std::floor(produto);     // Parte fracionária
-  return static_cast&lt;size_t&gt;(std::floor(fracao * tamanho));
+  double prod = std::abs(chave) * 0.6180339887;
+  double frac = prod - std::floor(prod);
+  return static_cast&lt;size_t&gt;(std::floor(frac * tamanho));
 }</code></pre>
-        <div class="explanation">
-          <p><b>Divisão:</b> Usa o resto da divisão por um número primo. É rápida mas pode gerar padrões regulares.</p>
-          <p><b>Multiplicação:</b> Usa a fração áurea (0,618...) como constante. Oferece melhor distribuição independente do tamanho da tabela.</p>
-        </div>
 
-        <h4>Operação de Inserção</h4>
+        <h4>Inserção, Busca e Remoção</h4>
         <pre><code class="language-cpp">void inserir(int valor, TipoHash tipo) {
-  size_t indice = (tipo == TipoHash::DIVISAO) 
-    ? calcularHashDivisao(valor) 
-    : calcularHashMultiplicacao(valor);
-  
-  // Evitar duplicatas
-  if (buscar(valor, tipo)) return;
-  
-  // Inserir no início da lista (O(1))
-  auto novoNo = std::make_unique&lt;No&gt;(valor);
-  novoNo-&gt;proximo = std::move(tabela[indice]);
-  tabela[indice] = std::move(novoNo);
+  size_t i = (tipo == TipoHash::DIVISAO) ? calcularHashDivisao(valor)
+                                         : calcularHashMultiplicacao(valor);
+  if (buscar(valor, tipo)) return;           // evita duplicata
+  auto novo = std::make_unique&lt;No&gt;(valor);
+  novo-&gt;proximo = std::move(tabela[i]);      // insere na cabeça (O(1))
+  tabela[i] = std::move(novo);
   ++numElementos;
+}
+
+bool buscar(int valor, TipoHash tipo) const {
+  size_t i = (tipo == TipoHash::DIVISAO) ? calcularHashDivisao(valor)
+                                         : calcularHashMultiplicacao(valor);
+  for (const No* p = tabela[i].get(); p; p = p-&gt;proximo.get()) {
+    if (p-&gt;valor == valor) return true;
+  }
+  return false;
+}
+
+bool remover(int valor, TipoHash tipo) {
+  size_t i = (tipo == TipoHash::DIVISAO) ? calcularHashDivisao(valor)
+                                         : calcularHashMultiplicacao(valor);
+  if (tabela[i] && tabela[i]-&gt;valor == valor) {          // caso cabeça
+    tabela[i] = std::move(tabela[i]-&gt;proximo);
+    --numElementos; return true;
+  }
+  for (No* p = tabela[i].get(); p && p-&gt;proximo; p = p-&gt;proximo.get()) {
+    if (p-&gt;proximo-&gt;valor == valor) {
+      p-&gt;proximo = std::move(p-&gt;proximo-&gt;proximo);
+      --numElementos; return true;
+    }
+  }
+  return false;
 }</code></pre>
         <div class="explanation">
-          <p><b>Estratégia:</b> Inserção no início da lista para eficiência O(1). A verificação de duplicatas evita elementos repetidos na tabela.</p>
+          <p><b>Complexidade Média:</b> Inserção O(1), busca/remoção O(1) amortizado. No pior caso (muitas colisões), O(n) por posição.</p>
         </div>
       </div>
 
       <div class="code-section">
-        <h3>TabelaHashAberta.cpp</h3>
+        <h3>TabelaHashAberta.hpp/.cpp</h3>
         <div class="explanation">
-          <p><b>Propósito:</b> Implementa endereçamento aberto com sondagem linear. Quando ocorre colisão, procura a próxima posição livre sequencialmente.</p>
+          <p><b>Propósito:</b> Implementa endereçamento aberto com <b>sondagem linear</b>, <b>lazy deletion</b> e limites de fator de carga. Mede sondagens e clustering.</p>
         </div>
 
         <h4>Estados da Célula</h4>
         <pre><code class="language-cpp">struct Celula {
   enum class Estado { VAZIO, OCUPADO, REMOVIDO };
-  
-  int valor;
-  Estado estado;
-  
+  int valor; Estado estado;
   Celula() : valor(0), estado(Estado::VAZIO) {}
   explicit Celula(int val) : valor(val), estado(Estado::OCUPADO) {}
-  
-  bool disponivelParaInsercao() const {
-    return estado == Estado::VAZIO || estado == Estado::REMOVIDO;
-  }
+  bool disponivelParaInsercao() const { return estado != Estado::OCUPADO; }
 };</code></pre>
-        <div class="explanation">
-          <p><b>Lazy Deletion:</b> Células removidas ficam marcadas como <code>REMOVIDO</code> em vez de <code>VAZIO</code>, permitindo que a sondagem continue corretamente sem quebrar cadeias de busca.</p>
-        </div>
 
-        <h4>Sondagem Linear</h4>
-        <pre><code class="language-cpp">size_t sondagemLinear(size_t indiceInicial, int valor, bool paraInsercao) const {
-  size_t tentativas = 0;
-  size_t indice = indiceInicial;
-  
-  while (tentativas &lt; tamanho) {
-    const Celula &cel = tabela[indice];
-    
+        <h4>Sondagem Linear e Inserção</h4>
+        <pre><code class="language-cpp">size_t sondagemLinear(size_t idx0, int valor, bool paraInsercao) const {
+  size_t tent = 0, i = idx0;
+  while (tent &lt; tamanho) {
+    const Celula &c = tabela[i];
     if (paraInsercao) {
-      // Para inserção: aceita VAZIO ou REMOVIDO
-      if (cel.disponivelParaInsercao()) return indice;
-      // Evita duplicatas
-      if (cel.estado == Celula::Estado::OCUPADO && cel.valor == valor) return indice;
+      if (c.disponivelParaInsercao()) return i;              // VAZIO ou REMOVIDO
+      if (c.estado == Celula::Estado::OCUPADO && c.valor == valor) return i; // duplicata
     } else {
-      // Para busca: para em VAZIO ou encontra o valor
-      if (cel.estado == Celula::Estado::VAZIO) return tamanho; // Não encontrado
-      if (cel.estado == Celula::Estado::OCUPADO && cel.valor == valor) return indice;
+      if (c.estado == Celula::Estado::VAZIO) return tamanho; // não existe
+      if (c.estado == Celula::Estado::OCUPADO && c.valor == valor) return i; // achou
     }
-    
-    indice = (indice + 1) % tamanho;  // Próxima posição (circular)
-    ++tentativas;
+    i = (i + 1) % tamanho; ++tent;
   }
-  return tamanho;  // Tabela cheia
+  return tamanho; // não encontrou
+}
+
+void inserir(int valor, TipoHash tipo) {
+  if (precisaRehash()) throw std::runtime_error("Fator de carga alto: rehash necessário");
+  size_t h = (tipo == TipoHash::DIVISAO) ? calcularHashDivisao(valor)
+                                         : calcularHashMultiplicacao(valor);
+  size_t i = sondagemLinear(h, valor, true);
+  if (i &gt;= tamanho) throw std::runtime_error("Tabela cheia");
+  if (tabela[i].estado == Celula::Estado::OCUPADO && tabela[i].valor == valor) return; // duplicata
+  if (tabela[i].estado == Celula::Estado::REMOVIDO) --numRemovidos;
+  tabela[i] = Celula(valor); ++numElementos;
 }</code></pre>
         <div class="explanation">
-          <p><b>Sondagem:</b> Busca sequencial a partir do índice inicial. Para inserção, aceita posições vazias ou removidas. Para busca, para ao encontrar posição vazia (elemento não existe).</p>
+          <p><b>Rehash:</b> A classe expõe <code>precisaRehash()</code> quando <i>fator de carga</i> ou <i>ocupação</i> ultrapassam limites configurados, preservando a performance média O(1).</p>
         </div>
       </div>
 
       <div class="code-section">
-        <h3>GeradorDados.cpp</h3>
+        <h3>GeradorDados.hpp/.cpp</h3>
         <div class="explanation">
-          <p><b>Propósito:</b> Gerencia datasets de teste, carregando arquivos existentes ou gerando números aleatórios para benchmarks.</p>
+          <p><b>Propósito:</b> Carrega arquivos existentes, gera números aleatórios (com/sem repetição), valida formato e estatísticas, e escreve relatórios (incluindo o CSV consolidado).</p>
         </div>
-
-        <h4>Carregamento de Arquivo</h4>
-        <pre><code class="language-cpp">std::vector&lt;int&gt; carregarDeArquivo(const std::string &nomeArquivo) {
-  std::ifstream arquivo(nomeArquivo);
-  if (!arquivo.is_open()) {
-    throw std::runtime_error("Não foi possível abrir: " + nomeArquivo);
-  }
-  
-  size_t quantidade;
-  arquivo &gt;&gt; quantidade;  // Primeira linha: quantidade de números
-  
-  std::vector&lt;int&gt; numeros;
-  numeros.reserve(quantidade);
-  
-  int numero;
-  while (arquivo &gt;&gt; numero && numeros.size() &lt; quantidade) {
-    numeros.push_back(numero);
-  }
-  
-  return numeros;
-}</code></pre>
-        <div class="explanation">
-          <p><b>Formato:</b> Arquivos têm na primeira linha a quantidade de números, seguida pelos valores (um por linha). O <code>reserve()</code> otimiza alocação de memória.</p>
-        </div>
-
-        <h4>Geração Aleatória</h4>
-        <pre><code class="language-cpp">std::vector&lt;int&gt; gerarNumerosAleatorios(size_t quantidade) {
-  std::vector&lt;int&gt; numeros;
-  std::unordered_set&lt;int&gt; gerados;  // Evitar duplicatas
-  
-  while (numeros.size() &lt; quantidade) {
-    int numero = distribuicao(gerador);
-    if (gerados.insert(numero).second) {  // Inserção bem-sucedida
-      numeros.push_back(numero);
-    }
-  }
-  
-  return numeros;
-}</code></pre>
-        <div class="explanation">
-          <p><b>Unicidade:</b> Usa <code>unordered_set</code> para garantir números únicos. O método <code>insert().second</code> retorna <code>true</code> apenas se o elemento foi realmente inserido (não é duplicata).</p>
-        </div>
+        <pre><code class="language-cpp">// Assinaturas principais
+std::vector&lt;int&gt; carregarDeArquivo(const std::string &nomeArquivo);
+std::vector&lt;int&gt; gerarNumerosAleatorios(size_t quantidade);
+std::vector&lt;int&gt; gerarNumerosAleatoriosComRepeticao(size_t quantidade);
+bool salvarEmArquivo(const std::vector&lt;int&gt;&numeros, const std::string &nomeArquivo);
+GeradorDados::InfoDataset analisarDataset(const std::string &nomeArquivo);
+</code></pre>
       </div>
 
       <div class="code-section">
-        <h3>main.cpp - Programa Principal</h3>
+        <h3>main.cpp</h3>
         <div class="explanation">
-          <p><b>Propósito:</b> Orquestra todos os benchmarks, medindo tempos de operações e coletando estatísticas para análise comparativa.</p>
+          <p><b>Responsável:</b> Orquestra benchmarks, mede tempos, calcula colisões e fator de carga, imprime relatório e salva <code>resultados_benchmark.csv</code>.</p>
         </div>
-
-        <h4>Medição de Tempo</h4>
-        <pre><code class="language-cpp">template&lt;typename Func&gt;
-double medirTempo(Func &&func) {
-  auto inicio = std::chrono::high_resolution_clock::now();
-  func();  // Executa a operação
-  auto fim = std::chrono::high_resolution_clock::now();
-  
-  auto duracao = std::chrono::duration_cast&lt;std::chrono::microseconds&gt;(fim - inicio);
-  return duracao.count() / 1000.0;  // Converte para milissegundos
-}</code></pre>
-        <div class="explanation">
-          <p><b>Precisão:</b> Usa <code>high_resolution_clock</code> para medição precisa. Template permite medir qualquer função lambda ou callable.</p>
-        </div>
-
-        <h4>Execução dos Testes</h4>
-        <pre><code class="language-cpp">void testarTabelaEncadeada(const std::vector&lt;int&gt; &dados, 
-                          const std::vector&lt;int&gt; &dadosBusca,
-                          size_t tamanhoTabela) {
-  // Teste com função divisão
-  TabelaHashEncadeada tabela(tamanhoTabela);
-  
-  double tempoInsercao = medirTempo([&]() {
-    for (int valor : dados) {
-      tabela.inserir(valor, TabelaHashEncadeada::TipoHash::DIVISAO);
-    }
-  });
-  
-  double tempoBusca = medirTempo([&]() {
-    for (int valor : dadosBusca) {
-      tabela.buscar(valor, TabelaHashEncadeada::TipoHash::DIVISAO);
-    }
-  });
-  
-  // Salva resultados para CSV
-  resultados.push_back({"Encadeada", tamanhoTabela, dados.size(), 
-                       "Divisao", tempoInsercao, tempoBusca, 
-                       contarColisoes(tabela), tabela.fatorCarga()});
-}</code></pre>
-        <div class="explanation">
-          <p><b>Metodologia:</b> Cada teste mede inserção de todos os dados, depois busca de 1.000 elementos. Repete para ambas as funções hash e todos os tamanhos de tabela.</p>
-        </div>
+        <pre><code class="language-cpp">template&lt;typename Func&gt; double medirTempo(Func &amp;&amp;f);
+void testarTabelaEncadeada(...);
+void testarTabelaAberta(...);
+void salvarResultados(const std::string &arquivo);
+</code></pre>
       </div>
     </section>
 
@@ -354,6 +289,11 @@ double medirTempo(Func &&func) {
       <div class="chart-container">
         <h3>Relação Fator de Carga × Colisões</h3>
         <canvas id="g_carga_colisao" class="chart"></canvas>
+      </div>
+      
+      <div class="chart-container">
+        <h3>Clustering e Sondagem — Tabela Aberta</h3>
+        <canvas id="g_aberta_cluster" class="chart"></canvas>
       </div>
       
       <p class="muted">Fonte: dados empíricos do arquivo <code>resultados_benchmark.csv</code> gerado pela aplicação C++.</p>
@@ -545,85 +485,63 @@ Aberta,50009,25005,Multiplicacao,0.355,0.024,6251,0.5000`;
   (async ()=>{
     const dados = await carregarCSV();
 
-    // Gráfico 1: Tempo de Inserção
+    // Gráfico 1: Tempo de Inserção (Encadeada vs Aberta)
     const gruposQD = [...new Set(dados.map(d=>d.QuantidadeDados))].sort((a,b)=>a-b);
-    
-    const encadeadaIns = gruposQD.map(q => {
-      const subset = dados.filter(d => d.QuantidadeDados === q && d.TipoTabela === 'Encadeada');
-      return subset.length ? subset.reduce((s,x) => s + x.TempoInsercao, 0) / subset.length : 0;
-    });
-    
-    const abertaIns = gruposQD.map(q => {
-      const subset = dados.filter(d => d.QuantidadeDados === q && d.TipoTabela === 'Aberta');
-      return subset.length ? subset.reduce((s,x) => s + x.TempoInsercao, 0) / subset.length : 0;
+    const mediaPor = (tipo, campo) => gruposQD.map(q => {
+      const subset = dados.filter(d => d.QuantidadeDados === q && d.TipoTabela === tipo);
+      const soma = subset.reduce((s,x) => s + x[campo], 0);
+      return subset.length ? soma / subset.length : 0;
     });
 
     criarGraficoLinha(
       document.getElementById('g_insercao'),
-      'Comparação de Tempo de Inserção',
-      'Quantidade de Dados', 'Tempo de Inserção (ms)',
+      'Comparação de Tempo de Inserção', 'Quantidade de Dados', 'Tempo de Inserção (ms)',
       [
-        { label: 'Tabela Encadeada', data: gruposQD.map((x,i) => ({x, y: encadeadaIns[i]})), borderColor: '#60a5fa', backgroundColor: '#60a5fa33', tension: 0.2 },
-        { label: 'Tabela Aberta', data: gruposQD.map((x,i) => ({x, y: abertaIns[i]})), borderColor: '#34d399', backgroundColor: '#34d39933', tension: 0.2 }
+        { label: 'Tabela Encadeada', data: gruposQD.map((x,i)=>({x,y: mediaPor('Encadeada','TempoInsercao')[i]})), borderColor:'#60a5fa', backgroundColor:'#60a5fa33', tension:.2 },
+        { label: 'Tabela Aberta',    data: gruposQD.map((x,i)=>({x,y: mediaPor('Aberta','TempoInsercao')[i]})),    borderColor:'#34d399', backgroundColor:'#34d39933', tension:.2 }
       ]
     );
 
-    // Gráfico 2: Tempo de Busca
-    const encadeadaBus = gruposQD.map(q => {
-      const subset = dados.filter(d => d.QuantidadeDados === q && d.TipoTabela === 'Encadeada');
-      return subset.length ? subset.reduce((s,x) => s + x.TempoBusca, 0) / subset.length : 0;
-    });
-    
-    const abertaBus = gruposQD.map(q => {
-      const subset = dados.filter(d => d.QuantidadeDados === q && d.TipoTabela === 'Aberta');
-      return subset.length ? subset.reduce((s,x) => s + x.TempoBusca, 0) / subset.length : 0;
-    });
-
+    // Gráfico 2: Tempo de Busca (Encadeada vs Aberta)
     criarGraficoLinha(
       document.getElementById('g_busca'),
-      'Comparação de Tempo de Busca',
-      'Quantidade de Dados', 'Tempo de Busca (ms)',
+      'Comparação de Tempo de Busca', 'Quantidade de Dados', 'Tempo de Busca (ms)',
       [
-        { label: 'Tabela Encadeada', data: gruposQD.map((x,i) => ({x, y: encadeadaBus[i]})), borderColor: '#06b6d4', backgroundColor: '#06b6d433', tension: 0.2 },
-        { label: 'Tabela Aberta', data: gruposQD.map((x,i) => ({x, y: abertaBus[i]})), borderColor: '#a78bfa', backgroundColor: '#a78bfa33', tension: 0.2 }
+        { label: 'Tabela Encadeada', data: gruposQD.map((x,i)=>({x,y: mediaPor('Encadeada','TempoBusca')[i]})), borderColor:'#06b6d4', backgroundColor:'#06b6d433', tension:.2 },
+        { label: 'Tabela Aberta',    data: gruposQD.map((x,i)=>({x,y: mediaPor('Aberta','TempoBusca')[i]})),    borderColor:'#a78bfa', backgroundColor:'#a78bfa33', tension:.2 }
       ]
     );
 
-    // Gráfico 3: Funções Hash (10k elementos)
-    const tamanhos = [29, 97, 251, 499, 911];
-    const enc10k = dados.filter(d => d.TipoTabela === 'Encadeada' && d.QuantidadeDados === 10000);
-    
-    const divisaoVals = tamanhos.map(t => {
-      const item = enc10k.find(d => d.TamanhoTabela === t && d.FuncaoHash === 'Divisao');
-      return item ? item.TempoInsercao : 0;
-    });
-    
-    const multiplicacaoVals = tamanhos.map(t => {
-      const item = enc10k.find(d => d.TamanhoTabela === t && d.FuncaoHash === 'Multiplicacao');
-      return item ? item.TempoInsercao : 0;
-    });
-
+    // Gráfico 3: Funções Hash em Encadeada (10.000 elementos)
+    const tamanhos = [29,97,251,499,911];
+    const enc10k = dados.filter(d => d.TipoTabela==='Encadeada' && d.QuantidadeDados===10000);
+    const divs = tamanhos.map(t => enc10k.find(d => d.TamanhoTabela===t && d.FuncaoHash==='Divisao')?.TempoInsercao ?? 0);
+    const mult = tamanhos.map(t => enc10k.find(d => d.TamanhoTabela===t && d.FuncaoHash==='Multiplicacao')?.TempoInsercao ?? 0);
     criarGraficoBarras(
       document.getElementById('g_funcoes'),
-      'Comparação de Funções Hash (Inserção - 10.000 elementos)',
-      'Tamanho da Tabela', 'Tempo de Inserção (ms)',
+      'Comparação de Funções Hash (Inserção - 10.000 elementos)', 'Tamanho da Tabela', 'Tempo de Inserção (ms)',
       tamanhos.map(String),
-      [
-        { label: 'Função Divisão', data: divisaoVals, backgroundColor: '#60a5fa' },
-        { label: 'Função Multiplicação', data: multiplicacaoVals, backgroundColor: '#34d399' }
-      ]
+      [ { label:'Função Divisão', data:divs, backgroundColor:'#60a5fa' }, { label:'Função Multiplicação', data:mult, backgroundColor:'#34d399' } ]
     );
 
-    // Gráfico 4: Fator de Carga x Colisões
-    const pontos = dados
-      .filter(d => d.TipoTabela === 'Encadeada')
-      .map(d => ({ x: +d.FatorCarga.toFixed(4), y: d.Colisoes }));
-
+    // Gráfico 4: Fator de Carga × Colisões (Encadeada)
+    const pontosEnc = dados.filter(d => d.TipoTabela==='Encadeada').map(d => ({x:+d.FatorCarga.toFixed(4), y:d.Colisoes}));
     criarGraficoDispersao(
       document.getElementById('g_carga_colisao'),
-      'Relação Fator de Carga × Colisões (Encadeadas)',
-      'Fator de Carga', 'Número de Colisões',
-      pontos
+      'Relação Fator de Carga × Colisões (Encadeadas)', 'Fator de Carga', 'Número de Colisões', pontosEnc
+    );
+
+    // Gráfico 5: Sondagens/Clustering — Tabela Aberta (estimativa por fator de carga)
+    const abertas = dados.filter(d => d.TipoTabela==='Aberta');
+    const porCarga = [...new Map(abertas.map(d => [d.FatorCarga, d])).values()].sort((a,b)=>a.FatorCarga-b.FatorCarga);
+    const estSondagem = porCarga.map(d => Math.max(1, +(1/(1-d.FatorCarga)).toFixed(3))); // heurística básica
+    const labelsCarga = porCarga.map(d => +d.FatorCarga.toFixed(3));
+
+    criarGraficoBarras(
+      document.getElementById('g_aberta_cluster'),
+      'Tabela Aberta: Heurística de Sondagens vs Fator de Carga', 'Fator de Carga', 'Sondagens Médias (estim.)',
+      labelsCarga,
+      [ { label:'Sondagens (estim.)', data: estSondagem, backgroundColor:'#f59e0b' } ]
     );
   })();
   </script>
