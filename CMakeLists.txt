@@ -15,7 +15,7 @@ endif()
 
 option(ENABLE_WARNINGS "Habilitar warnings adicionais" ON)
 
-# Flags específicas para tornar o executável mais portável em Windows
+# Flags específicas para tornar o executável mais portátil em Windows
 if(WIN32)
     if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         # Linkagem estática das libs C++/gcc e pthread (quando disponível)
@@ -45,9 +45,9 @@ include_directories(${PROJECT_SOURCE_DIR}/include)
 
 set(SOURCES
     src/main.cpp
-    src/TabelaHashEncadeada.cpp
-    src/TabelaHashAberta.cpp
-    src/GeradorDados.cpp
+    src/TabelaEncadeada.cpp
+    src/TabelaAberta.cpp
+    src/CarregadorDados.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
