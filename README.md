@@ -200,5 +200,3 @@ Este projeto é distribuído sob a Licença MIT.
 ---
 
 **Desenvolvido para a disciplina de Pesquisa e Ordenação**  
-**Universidade:** *[Sua Universidade]*  
-**Ano:** 2024
