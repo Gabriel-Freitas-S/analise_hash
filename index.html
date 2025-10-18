@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Análise Comparativa de Tabelas Hash</title>
+  <meta name="description" content="Implementação e análise comparativa de soluções baseadas em hashing (C++17): listas encadeadas vs endereçamento aberto; funções hash: divisão e multiplicação." />
+  <style>
+    :root {
+      --bg:#0b1220; --card:#111a2e; --muted:#a9b4c9; --text:#eaf0ff; --acc:#4da3ff; --acc2:#22c55e;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(180deg,#0b1220,#0c1426 40%,#0b1323);color:var(--text);font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
+    a{color:var(--acc);text-decoration:none}
+    header{position:sticky;top:0;z-index:10;background:rgba(11,18,32,.8);backdrop-filter:saturate(140%) blur(8px);border-bottom:1px solid #1e2a44}
+    .nav{max-width:1100px;margin:auto;display:flex;gap:16px;align-items:center;justify-content:space-between;padding:10px 16px}
+    .brand{display:flex;gap:10px;align-items:center}
+    .brand h1{font-size:18px;margin:0}
+    .menu{display:flex;gap:14px;flex-wrap:wrap}
+    .container{max-width:1100px;margin:auto;padding:24px 16px}
+    h2{margin:22px 0 10px;font-size:26px}
+    h3{margin:18px 0 8px;font-size:20px;color:#cfe3ff}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
+    .card{background:var(--card);border:1px solid #203052;border-radius:12px;padding:16px}
+    .muted{color:var(--muted)}
+    .pill{display:inline-block;padding:6px 10px;border-radius:999px;border:1px solid #28436a;background:#0e1a31;color:#cde0ff;font-size:12px}
+    .btn{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(90deg,#2563eb,#0ea5e9);border:none;padding:10px 14px;border-radius:10px;color:#fff;font-weight:600}
+    .twocol{display:grid;grid-template-columns:1.2fr .8fr;gap:16px}
+    @media (max-width:900px){.twocol{grid-template-columns:1fr}}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px;border-bottom:1px solid #1f2b46}
+    th{color:#cde0ff;text-align:left}
+    tr:hover{background:#0f1a34}
+    .footer{border-top:1px solid #1e2a44;margin-top:28px;padding-top:16px;color:#9db0d4}
+    code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
+    pre{background:#0d162b;border:1px solid #1d2a49;border-radius:10px;padding:14px;overflow:auto}
+    .chart{height:340px}
+    .tag{display:inline-block;margin:2px 6px 0 0;padding:4px 8px;border:1px solid #28436a;border-radius:999px;color:#bcd5ff;font-size:12px}
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <header>
+    <div class="nav">
+      <div class="brand">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h10M4 18h16" stroke="#9cc6ff" stroke-width="2" stroke-linecap="round"/></svg>
+        <h1>Análise Comparativa de Tabelas Hash</h1>
+      </div>
+      <nav class="menu">
+        <a href="#intro">Introdução</a>
+        <a href="#metodologia">Metodologia</a>
+        <a href="#implementacao">Implementação</a>
+        <a href="#resultados">Resultados</a>
+        <a href="#discussao">Discussão</a>
+        <a href="#conclusao">Conclusão</a>
+        <a href="https://github.com/Gabriel-Freitas-S/analise_hash" target="_blank" rel="noopener">Repositório</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section id="intro" class="card">
+      <div class="twocol">
+        <div>
+          <h2>Introdução</h2>
+          <p>Este trabalho implementa e compara duas estratégias de tratamento de colisões em tabelas hash — <b>listas encadeadas</b> (chaining) e <b>endereçamento aberto</b> (sondagem linear) — aliadas a duas funções de hashing: <b>divisão</b> e <b>multiplicação</b>. O estudo quantifica <b>tempo de inserção</b>, <b>tempo de busca</b>, <b>colisões</b> e <b>fator de carga</b> com datasets de 100 a 50.000 elementos, em C++17.</p>
+          <div>
+            <span class="tag">C++17</span>
+            <span class="tag">Encadeamento</span>
+            <span class="tag">Endereçamento Aberto</span>
+            <span class="tag">Divisão</span>
+            <span class="tag">Multiplicação</span>
+            <span class="tag">Benchmarks</span>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Funções Hash</h3>
+          <p class="muted"><b>Divisão:</b> h(k) = k mod p. &nbsp; <b>Multiplicação:</b> h(k) = ⌊ frac(k×c) × p ⌋, com c ≈ 0,618.</p>
+          <p class="muted">Para encadeamento, tamanhos <i>primos</i> (29, 97, 251, 499, 911) favorecem distribuição; para aberto, tabela fixa 50.009.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="metodologia" class="card">
+      <h2>Metodologia</h2>
+      <p>Os experimentos inserem e buscam inteiros provenientes de arquivos de dados, medindo tempos com relógio de alta resolução. Para cada dataset, testamos <b>encadeamento</b> com cinco tamanhos de tabela e <b>endereçamento aberto</b> com tamanho fixo. Os arquivos de 100 a 50.000 elementos foram usados, e 1.000 números aleatórios (com repetição) serviram para as buscas.</p>
+      <ul>
+        <li><b>Métricas:</b> Tempo de Inserção (ms), Tempo de Busca (ms), Colisões, Fator de Carga.</li>
+        <li><b>Dados:</b> resultados_benchmark.csv gerado pelo programa.</li>
+      </ul>
+    </section>
+
+    <section id="implementacao" class="card">
+      <h2>Implementação</h2>
+      <h3>TabelaHashEncadeada</h3>
+      <p>Armazena colisões em listas encadeadas por posição. Evita duplicatas, oferece inserção/busca/remoção e estatísticas de distribuição. Suporta <i>divisão</i> e <i>multiplicação</i> para mapeamento de índices.</p>
+<pre><code>// Cálculo de hash (divisão)
+size_t calcularHashDivisao(int chave) const {
+  return static_cast&lt;size_t&gt;(std::abs(chave)) % tamanho;
+}
+// Cálculo de hash (multiplicação)
+size_t calcularHashMultiplicacao(int chave) const {
+  double prod = std::abs(chave) * 0.6180339887;
+  double frac = prod - std::floor(prod);
+  return static_cast&lt;size_t&gt;(std::floor(frac * tamanho));
+}</code></pre>
+
+      <h3>TabelaHashAberta</h3>
+      <p>Usa <b>sondagem linear</b> para endereçamento aberto com lazy deletion e controle de fator de carga, disparando rehash quando necessário. Suporta as duas funções hash e mede estatísticas de sondagem e clustering.</p>
+<pre><code>// Sondagem linear simplificada
+size_t sondagemLinear(size_t idx, int valor, bool paraInsercao) const {
+  size_t tent = 0; size_t i = idx;
+  while (tent &lt; tamanho) {
+    const auto &cel = tabela[i];
+    if (paraInsercao ? cel.disponivelParaInsercao() : cel.estado == OCUPADO && cel.valor == valor)
+      return i;
+    if (!paraInsercao && cel.estado == VAZIO) return tamanho; // não encontrado
+    i = (i + 1) % tamanho; ++tent;
+  }
+  return tamanho;
+}</code></pre>
+
+      <h3>GeradorDados</h3>
+      <p>Carrega datasets da pasta <code>data/</code>, gera números aleatórios (com/sem repetição), valida arquivos e calcula estatísticas básicas, além de produzir o CSV consolidado de resultados.</p>
+    </section>
+
+    <section id="resultados" class="card">
+      <h2>Resultados</h2>
+      <div class="grid">
+        <div class="card" style="grid-column: span 12;">
+          <h3>Comparação de Tempo de Inserção</h3>
+          <canvas id="g_insercao" class="chart"></canvas>
+        </div>
+        <div class="card" style="grid-column: span 12;">
+          <h3>Comparação de Tempo de Busca</h3>
+          <canvas id="g_busca" class="chart"></canvas>
+        </div>
+        <div class="card" style="grid-column: span 12;">
+          <h3>Comparação de Funções Hash (Inserção)</h3>
+          <canvas id="g_funcoes" class="chart"></canvas>
+        </div>
+        <div class="card" style="grid-column: span 12;">
+          <h3>Relação Fator de Carga × Colisões</h3>
+          <canvas id="g_carga_colisao" class="chart"></canvas>
+        </div>
+      </div>
+      <p class="muted">Fontes: dados empíricos do arquivo <code>resultados_benchmark.csv</code> gerado pela aplicação.</p>
+    </section>
+
+    <section id="discussao" class="card">
+      <h2>Discussão</h2>
+      <p><b>Encadeamento</b> apresenta estabilidade mesmo com alto fator de carga, à custa de memória adicional por listas. <b>Endereçamento aberto</b> é eficiente em espaço, mas sofre com <i>clustering</i> e degrada com fatores de carga elevados, exigindo rehash. A função de <b>divisão</b> tendeu a ser mais rápida nos testes, enquanto a de <b>multiplicação</b> pode oferecer distribuição mais uniforme conforme o tamanho da tabela.</p>
+    </section>
+
+    <section id="conclusao" class="card">
+      <h2>Conclusão</h2>
+      <p>As duas estratégias são viáveis: para cargas altas e inserções intensivas, o encadeamento manteve tempos competitivos e previsíveis; para economia de espaço e consultas rápidas em baixas cargas, o endereçamento aberto se mostrou atrativo. Controlar o <b>fator de carga</b> é determinante para a performance, especialmente em endereçamento aberto. A escolha ótima depende do perfil de uso, da política de rehash e do tamanho da tabela.</p>
+      <a class="btn" href="https://github.com/Gabriel-Freitas-S/analise_hash" target="_blank" rel="noopener">Ver Repositório</a>
+    </section>
+
+    <div class="footer">
+      <p>Autores: <a href="https://github.com/Gabriel-Freitas-S" target="_blank">Gabriel Freitas Souza</a> e <a href="https://github.com/RoberliSchuina" target="_blank">Roberli Schuina Silva</a> • Disciplina: Pesquisa e Ordenação • C++17</p>
+    </div>
+  </main>
+
+  <script>
+  // Utilitários PT-BR para tooltips/labels
+  const LABELS = {
+    insercao: { titulo: 'Comparação de Tempo de Inserção', x: 'Quantidade de Dados', y: 'Tempo de Inserção (ms)' },
+    busca:    { titulo: 'Comparação de Tempo de Busca', x: 'Quantidade de Dados', y: 'Tempo de Busca (ms)' },
+    funcoes:  { titulo: 'Comparação de Funções Hash (Inserção)', x: 'Tamanho da Tabela', y: 'Tempo de Inserção (ms)' },
+    relacao:  { titulo: 'Relação Fator de Carga × Colisões', x: 'Fator de Carga', y: 'Número de Colisões' }
+  };
+
+  async function carregarCSV(){
+    // Tenta obter o CSV via fetch do caminho raiz (quando hospedado no próprio repositório)
+    const resp = await fetch('resultados_benchmark.csv');
+    const text = await resp.text();
+    const linhas = text.trim().split(/\r?\n/);
+    const cab = linhas.shift().split(',');
+    return linhas.map(l => {
+      const c = l.split(',');
+      return {
+        TipoTabela: c[0], TamanhoTabela:+c[1], QuantidadeDados:+c[2], FuncaoHash:c[3],
+        TempoInsercao:+c[4], TempoBusca:+c[5], Colisoes:+c[6], FatorCarga:+c[7]
+      }
+    });
+  }
+
+  function criarGraficoLinha(ctx, titulo, labelX, labelY, series){
+    new Chart(ctx, {
+      type: 'line',
+      data: { labels: series[0].x, datasets: series.map(s => ({
+        label: s.nome, data: s.y, borderColor: s.cor, backgroundColor: s.cor+'33', tension:.2, fill:false
+      }))},
+      options: { responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{labels:{color:'#dbeafe'}}, title:{display:true,text:titulo,color:'#eaf0ff'}, tooltip:{callbacks:{label:(ctx)=>`${ctx.dataset.label}: ${ctx.parsed.y} ms`}} },
+        scales:{ x:{ title:{display:true,text:labelX,color:'#cfe3ff'}, ticks:{color:'#cfe3ff'} }, y:{ title:{display:true,text:labelY,color:'#cfe3ff'}, ticks:{color:'#cfe3ff'} } }
+      }
+    });
+  }
+
+  function criarGraficoBarras(ctx, titulo, labelX, labelY, categorias, valores1, valores2, nome1, nome2){
+    new Chart(ctx, {
+      type:'bar',
+      data:{ labels: categorias, datasets:[
+        {label:nome1, data: valores1, backgroundColor:'#60a5fa'},
+        {label:nome2, data: valores2, backgroundColor:'#34d399'}
+      ]},
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{labels:{color:'#dbeafe'}}, title:{display:true,text:titulo,color:'#eaf0ff'}, tooltip:{callbacks:{label:(ctx)=>`${ctx.dataset.label}: ${ctx.parsed.y} ms`}}},
+        scales:{ x:{ title:{display:true,text:labelX,color:'#cfe3ff'}, ticks:{color:'#cfe3ff'} }, y:{ title:{display:true,text:labelY,color:'#cfe3ff'}, ticks:{color:'#cfe3ff'} } }
+      }
+    });
+  }
+
+  function criarGraficoDispersao(ctx, titulo, labelX, labelY, pontos){
+    new Chart(ctx, {
+      type:'scatter',
+      data:{ datasets:[{ label:'Encadeada', data: pontos, backgroundColor:'#f59e0b' }]},
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{labels:{color:'#dbeafe'}}, title:{display:true,text:titulo,color:'#eaf0ff'}, tooltip:{callbacks:{label:(ctx)=>`Fator de Carga: ${ctx.parsed.x}, Colisões: ${ctx.parsed.y}`}}},
+        scales:{ x:{ title:{display:true,text:labelX,color:'#cfe3ff'}, ticks:{color:'#cfe3ff'} }, y:{ title:{display:true,text:labelY,color:'#cfe3ff'}, ticks:{color:'#cfe3ff'} } }
+      }
+    });
+  }
+
+  (async ()=>{
+    const dados = await carregarCSV();
+
+    // Inserção (linhas) — encadeada vs aberta agregado por QuantidadeDados (média)
+    const gruposQD = [...new Set(dados.map(d=>d.QuantidadeDados))].sort((a,b)=>a-b);
+    function serie(tipo){
+      return gruposQD.map(q => {
+        const subset = dados.filter(d=>d.QuantidadeDados===q && d.TipoTabela===tipo);
+        const media = subset.length ? (subset.reduce((s,x)=>s+x.TempoInsercao,0)/subset.length) : 0;
+        return +media.toFixed(3);
+      });
+    }
+    criarGraficoLinha(
+      document.getElementById('g_insercao'),
+      LABELS.insercao.titulo, LABELS.insercao.x, LABELS.insercao.y,
+      [ {nome:'Tabela Encadeada', x:gruposQD, y:serie('Encadeada'), cor:'#60a5fa'},
+        {nome:'Tabela Aberta',    x:gruposQD, y:serie('Aberta'),    cor:'#34d399'} ]
+    );
+
+    // Busca (linhas) — encadeada vs aberta agregado por QuantidadeDados (média)
+    function serieBusca(tipo){
+      return gruposQD.map(q => {
+        const subset = dados.filter(d=>d.QuantidadeDados===q && d.TipoTabela===tipo);
+        const media = subset.length ? (subset.reduce((s,x)=>s+x.TempoBusca,0)/subset.length) : 0;
+        return +media.toFixed(3);
+      });
+    }
+    criarGraficoLinha(
+      document.getElementById('g_busca'),
+      LABELS.busca.titulo, LABELS.busca.x, LABELS.busca.y,
+      [ {nome:'Tabela Encadeada', x:gruposQD, y:serieBusca('Encadeada'), cor:'#06b6d4'},
+        {nome:'Tabela Aberta',    x:gruposQD, y:serieBusca('Aberta'),    cor:'#a78bfa'} ]
+    );
+
+    // Funções hash (barras) — apenas Encadeada @ 10.000 elementos
+    const alvo = 10000;
+    const tamanhos = [29,97,251,499,911];
+    const enc10k = dados.filter(d=>d.TipoTabela==='Encadeada' && d.QuantidadeDados===alvo);
+    const divs = tamanhos.map(t=> +(enc10k.find(d=>d.TamanhoTabela===t && d.FuncaoHash==='Divisao')?.TempoInsercao ?? 0).toFixed(3));
+    const mult = tamanhos.map(t=> +(enc10k.find(d=>d.TamanhoTabela===t && d.FuncaoHash==='Multiplicacao')?.TempoInsercao ?? 0).toFixed(3));
+    criarGraficoBarras(
+      document.getElementById('g_funcoes'),
+      LABELS.funcoes.titulo, LABELS.funcoes.x, LABELS.funcoes.y,
+      tamanhos.map(String), divs, mult, 'Função Divisão', 'Função Multiplicação'
+    );
+
+    // Dispersão Fator de Carga × Colisões — apenas Encadeada
+    const pontos = dados.filter(d=>d.TipoTabela==='Encadeada').map(d=>({x:+d.FatorCarga.toFixed(4), y:d.Colisoes}));
+    criarGraficoDispersao(
+      document.getElementById('g_carga_colisao'),
+      LABELS.relacao.titulo, LABELS.relacao.x, LABELS.relacao.y,
+      pontos
+    );
+  })();
+  </script>
+</body>
+</html>
