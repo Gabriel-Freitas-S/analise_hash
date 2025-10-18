@@ -95,24 +95,29 @@
         <!-- Estrutura do Projeto -->
         <section id="estrutura" class="mb-12 bg-white p-6 rounded-lg shadow">
             <h2 class="text-2xl font-semibold mb-4 border-b pb-2">2. Estrutura do Projeto</h2>
-            <p class="mb-4 text-gray-700">O projeto foi organizado de forma modular para separar as definições das classes, suas implementações e os dados de teste.</p>
+            <p class="mb-4 text-gray-700">O projeto foi organizado de forma modular para separar as definições das classes, suas implementações e os dados de teste. A estrutura atual reflete nomes mais claros e apropriados para cada componente.</p>
             <div class="code-block">
                 <pre>
 /
-├── CMakeLists.txt         <span class="comment">// Arquivo de configuração do build com CMake</span>
-├── data/                    <span class="comment">// Diretório para os conjuntos de dados de entrada</span>
+├── CMakeLists.txt              <span class="comment">// Arquivo de configuração do build com CMake</span>
+├── data/                        <span class="comment">// Diretório para os conjuntos de dados de entrada</span>
 │   ├── numeros_aleatorios_100.txt
-│   └── ...
-├── include/                 <span class="comment">// Arquivos de cabeçalho (.hpp) com as definições das classes</span>
-│   ├── GeradorDados.hpp
-│   ├── TabelaHashAberta.hpp
-│   └── TabelaHashEncadeada.hpp
-├── src/                     <span class="comment">// Arquivos de código-fonte (.cpp) com as implementações</span>
-│   ├── GeradorDados.cpp
-│   ├── main.cpp             <span class="comment">// Ponto de entrada, orquestra os benchmarks</span>
-│   ├── TabelaHashAberta.cpp
-│   └── TabelaHashEncadeada.cpp
-└── resultados_benchmark.csv <span class="comment">// Arquivo de saída com os resultados dos testes</span>
+│   ├── numeros_aleatorios_500.txt
+│   ├── numeros_aleatorios_1000.txt
+│   ├── numeros_aleatorios_5000.txt
+│   ├── numeros_aleatorios_10000.txt
+│   └── numeros_aleatorios_50000.txt
+├── include/                     <span class="comment">// Arquivos de cabeçalho (.hpp) com as definições das classes</span>
+│   ├── CarregadorDados.hpp       <span class="comment">// Carregamento de datasets da pasta data/</span>
+│   ├── TabelaEncadeada.hpp       <span class="comment">// Tabela hash com encadeamento</span>
+│   └── TabelaAberta.hpp          <span class="comment">// Tabela hash com endereçamento aberto</span>
+├── src/                         <span class="comment">// Arquivos de código-fonte (.cpp) com as implementações</span>
+│   ├── main.cpp                  <span class="comment">// Ponto de entrada, orquestra os benchmarks</span>
+│   ├── CarregadorDados.cpp       <span class="comment">// Implementação do carregador</span>
+│   ├── TabelaEncadeada.cpp       <span class="comment">// Implementação do encadeamento</span>
+│   └── TabelaAberta.cpp          <span class="comment">// Implementação do endereçamento aberto</span>
+├── index.html                   <span class="comment">// Página web com análise completa</span>
+└── resultados_benchmark.csv     <span class="comment">// Arquivo de saída com os resultados dos testes</span>
                 </pre>
             </div>
         </section>
@@ -127,109 +132,70 @@
                         <summary><code>src/main.cpp</code></summary>
                         <div class="details-content">
                             <p class="text-gray-700 leading-relaxed mb-4">
-                                Ponto de entrada da aplicação e orquestrador dos benchmarks. Este arquivo define todos os cenários de teste, combinando tipos de tabela (Encadeada, Aberta), tamanhos, quantidades de dados e funções de hash. Para cada cenário, ele instancia a tabela correspondente, carrega os dados do arquivo, e mede com precisão (usando <code>std::chrono</code>) o tempo total de inserção e busca. Ao final, coleta as métricas (tempo, colisões, fator de carga) e as escreve no arquivo <code>resultados_benchmark.csv</code>.
+                                Ponto de entrada da aplicação e orquestrador dos benchmarks. Este arquivo define todos os cenários de teste, combinando tipos de tabela (Encadeada, Aberta), tamanhos, quantidades de dados e funções de hash. Para cada cenário, ele instancia a tabela correspondente, carrega os dados usando o <code>CarregadorDados</code>, e mede com precisão (usando <code>std::chrono</code>) o tempo total de inserção e busca. Ao final, coleta as métricas (tempo, colisões, fator de carga) e as escreve no arquivo <code>resultados_benchmark.csv</code>.
                             </p>
                             <div class="code-block"><pre><code><span class="preprocessor">#include &lt;iostream&gt;</span>
-<span class="preprocessor">#include &lt;vector&gt;</span>
-<span class="preprocessor">#include &lt;string&gt;</span>
-<span class="preprocessor">#include &lt;fstream&gt;</span>
 <span class="preprocessor">#include &lt;chrono&gt;</span>
-<span class="preprocessor">#include &lt;numeric&gt;</span>
-<span class="preprocessor">#include &lt;algorithm&gt;</span>
+<span class="preprocessor">#include &lt;fstream&gt;</span>
+<span class="preprocessor">#include &lt;iomanip&gt;</span>
+<span class="preprocessor">#include &lt;vector&gt;</span>
+<span class="preprocessor">#include &lt;memory&gt;</span>
 
-<span class="preprocessor">#include "TabelaHashEncadeada.hpp"</span>
-<span class="preprocessor">#include "TabelaHashAberta.hpp"</span>
-<span class="preprocessor">#include "GeradorDados.hpp"</span>
+<span class="preprocessor">#include "TabelaEncadeada.hpp"</span>
+<span class="preprocessor">#include "TabelaAberta.hpp"</span>
+<span class="preprocessor">#include "CarregadorDados.hpp"</span>
 
-<span class="comment">// Função para ler números de um arquivo</span>
-<span class="type">std::vector&lt;int&gt;</span> lerNumeros(<span class="keyword">const</span> <span class="type">std::string</span>&amp; nomeArquivo) {
-    <span class="type">std::vector&lt;int&gt;</span> numeros;
-    <span class="type">std::ifstream</span> arquivo(nomeArquivo);
-    <span class="type">int</span> numero;
-    <span class="keyword">while</span> (arquivo &gt;&gt; numero) {
-        numeros.push_back(numero);
+<span class="keyword">struct</span> ResultadoTeste {
+    <span class="type">std::string</span> tipoTabela;
+    <span class="type">size_t</span> tamanhoTabela;
+    <span class="type">size_t</span> quantidadeDados;
+    <span class="type">std::string</span> tipoFuncaoHash;
+    <span class="type">double</span> tempoInsercao;
+    <span class="type">double</span> tempoBusca;
+    <span class="type">size_t</span> colisoes;
+    <span class="type">double</span> fatorCarga;
+};
+
+<span class="keyword">class</span> BenchmarkManager {
+<span class="keyword">private</span>:
+    <span class="type">std::vector&lt;ResultadoTeste&gt;</span> resultados;
+
+    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Func&gt;
+    <span class="type">double</span> medirTempo(Func&amp;&amp; func) {
+        <span class="keyword">auto</span> inicio = <span class="type">std::chrono::high_resolution_clock::now</span>();
+        func();
+        <span class="keyword">auto</span> fim = <span class="type">std::chrono::high_resolution_clock::now</span>();
+        <span class="keyword">auto</span> duracao = <span class="type">std::chrono::duration_cast&lt;std::chrono::microseconds&gt;</span>(fim - inicio);
+        <span class="keyword">return</span> duracao.count() / <span class="number">1000.0</span>;
     }
-    <span class="keyword">return</span> numeros;
-}
+
+<span class="keyword">public</span>:
+    <span class="type">void</span> testarTabelaEncadeada(<span class="keyword">const</span> <span class="type">std::vector&lt;int&gt;</span>&amp; dados,
+                              <span class="keyword">const</span> <span class="type">std::vector&lt;int&gt;</span>&amp; dadosBusca,
+                              <span class="type">size_t</span> tamanhoTabela) {
+        TabelaEncadeada tabela(tamanhoTabela);
+        <span class="type">double</span> tempoInsercao = medirTempo([&amp;]() { 
+            <span class="keyword">for</span> (<span class="type">int</span> v : dados) 
+                tabela.inserir(v, TabelaEncadeada::TipoHash::DIVISAO); 
+        });
+        <span type="comment">// ... resto da implementação</span>
+    }
+
+    <span type="comment">// Métodos similares para tabela aberta e relatórios</span>
+};
 
 <span class="type">int</span> main() {
-    <span class="comment">// Parâmetros para geração de dados</span>
-    <span class="type">std::vector&lt;int&gt;</span> quantidades = {<span class="number">100</span>, <span class="number">500</span>, <span class="number">1000</span>, <span class="number">5000</span>, <span class="number">10000</span>, <span class="number">50000</span>};
-    <span class="keyword">for</span> (<span class="type">int</span> qtd : quantidades) {
-        GeradorDados::gerar(qtd, <span class="string">"data/numeros_aleatorios_"</span> + std::to_string(qtd) + <span class="string">".txt"</span>);
-    }
-
-    <span class="comment">// Cenários de teste</span>
-    <span class="type">std::vector&lt;int&gt;</span> tamanhosTabelaEncadeada = {<span class="number">29</span>, <span class="number">97</span>, <span class="number">251</span>, <span class="number">499</span>, <span class="number">911</span>};
-    <span class="type">std::vector&lt;int&gt;</span> tamanhosTabelaAberta = {<span class="number">101</span>, <span class="number">251</span>, <span class="number">499</span>, <span class="number">911</span>, <span class="number">503</span>, <span class="number">1009</span>, <span class="number">5003</span>, <span class="number">10007</span>, <span class="number">50021</span>};
+    CarregadorDados carregador;
+    BenchmarkManager benchmark;
     
-    <span class="type">std::ofstream</span> resultados(<span class="string">"resultados_benchmark.csv"</span>);
-    resultados &lt;&lt; <span class="string">"TipoTabela,TamanhoTabela,QuantidadeDados,FuncaoHash,TempoInsercao(ms),TempoBusca(ms),Colisoes,FatorCarga\n"</span>;
-
-    <span class="keyword">for</span> (<span class="type">int</span> qtd : quantidades) {
-        <span class="type">std::string</span> nomeArquivo = <span class="string">"data/numeros_aleatorios_"</span> + std::to_string(qtd) + <span class="string">".txt"</span>;
-        <span class="type">std::vector&lt;int&gt;</span> numeros = lerNumeros(nomeArquivo);
-
-        <span class="comment">// Testes para Tabela Hash Encadeada</span>
-        <span class="keyword">for</span> (<span class="type">int</span> tamanho : tamanhosTabelaEncadeada) {
-            <span class="keyword">if</span> (tamanho &lt; qtd || qtd &lt; <span class="number">10000</span>) { <span class="comment">// Limita cenários para evitar execuções muito longas</span>
-                <span class="keyword">for</span> (<span class="type">std::string</span> func : {<span class="string">"Divisao"</span>, <span class="string">"Multiplicacao"</span>}) {
-                    TabelaHashEncadeada tabela(tamanho);
-                    
-                    <span class="keyword">auto</span> inicioInsercao = <span class="type">std::chrono::high_resolution_clock::now</span>();
-                    <span class="keyword">for</span> (<span class="type">int</span> n : numeros) {
-                        tabela.inserir(n, func);
-                    }
-                    <span class="keyword">auto</span> fimInsercao = <span class="type">std::chrono::high_resolution_clock::now</span>();
-                    <span class="type">std::chrono::duration&lt;double, std::milli&gt;</span> tempoInsercao = fimInsercao - inicioInsercao;
-
-                    <span class="keyword">auto</span> inicioBusca = <span class="type">std::chrono::high_resolution_clock::now</span>();
-                    <span class="keyword">for</span> (<span class="type">int</span> n : numeros) {
-                        tabela.buscar(n, func);
-                    }
-                    <span class="keyword">auto</span> fimBusca = <span class="type">std::chrono::high_resolution_clock::now</span>();
-                    <span class="type">std::chrono::duration&lt;double, std::milli&gt;</span> tempoBusca = fimBusca - inicioBusca;
-
-                    <span class="type">double</span> fatorCarga = <span class="keyword">static_cast</span>&lt;<span class="type">double</span>&gt;(qtd) / tamanho;
-                    resultados &lt;&lt; <span class="string">"Encadeada,"</span> &lt;&lt; tamanho &lt;&lt; <span class="string">","</span> &lt;&lt; qtd &lt;&lt; <span class="string">","</span> &lt;&lt; func &lt;&lt; <span class="string">","</span>
-                               &lt;&lt; tempoInsercao.count() &lt;&lt; <span class="string">","</span> &lt;&lt; tempoBusca.count() &lt;&lt; <span class="string">","</span>
-                               &lt;&lt; tabela.getColisoes() &lt;&lt; <span class="string">","</span> &lt;&lt; fatorCarga &lt;&lt; <span class="string">"\n"</span>;
-                }
-            }
-        }
-
-        <span class="comment">// Testes para Tabela Hash Aberta</span>
-        <span class="keyword">for</span> (<span class="type">int</span> tamanho : tamanhosTabelaAberta) {
-            <span class="keyword">if</span> (tamanho &gt; qtd) { <span class="comment">// Tabela aberta precisa ser maior que a quantidade de dados</span>
-                 <span class="keyword">for</span> (<span class="type">std::string</span> func : {<span class="string">"Divisao"</span>, <span class="string">"Multiplicacao"</span>}) {
-                    TabelaHashAberta tabela(tamanho);
-
-                    <span class="keyword">auto</span> inicioInsercao = <span class="type">std::chrono::high_resolution_clock::now</span>();
-                    <span class="keyword">for</span> (<span class="type">int</span> n : numeros) {
-                        tabela.inserir(n, func);
-                    }
-                    <span class="keyword">auto</span> fimInsercao = <span class="type">std::chrono::high_resolution_clock::now</span>();
-                    <span class="type">std::chrono::duration&lt;double, std::milli&gt;</span> tempoInsercao = fimInsercao - inicioInsercao;
-
-                    <span class="keyword">auto</span> inicioBusca = <span class="type">std::chrono::high_resolution_clock::now</span>();
-                    <span class="keyword">for</span> (<span class="type">int</span> n : numeros) {
-                        tabela.buscar(n, func);
-                    }
-                    <span class="keyword">auto</span> fimBusca = <span class="type">std::chrono::high_resolution_clock::now</span>();
-                    <span class="type">std::chrono::duration&lt;double, std::milli&gt;</span> tempoBusca = fimBusca - inicioBusca;
-
-                    <span class="type">double</span> fatorCarga = <span class="keyword">static_cast</span>&lt;<span class="type">double</span>&gt;(qtd) / tamanho;
-                    resultados &lt;&lt; <span class="string">"Aberta,"</span> &lt;&lt; tamanho &lt;&lt; <span class="string">","</span> &lt;&lt; qtd &lt;&lt; <span class="string">","</span> &lt;&lt; func &lt;&lt; <span class="string">","</span>
-                               &lt;&lt; tempoInsercao.count() &lt;&lt; <span class="string">","</span> &lt;&lt; tempoBusca.count() &lt;&lt; <span class="string">","</span>
-                               &lt;&lt; tabela.getColisoes() &lt;&lt; <span class="string">","</span> &lt;&lt; fatorCarga &lt;&lt; <span class="string">"\n"</span>;
-                }
-            }
-        }
+    <span class="comment">// Execução dos benchmarks para todos os cenários</span>
+    <span class="keyword">for</span> (<span class="keyword">const</span> <span class="type">std::string</span>&amp; arquivo : ARQS) {
+        <span class="keyword">auto</span> dados = carregador.carregarDeArquivo(arquivo);
+        <span class="comment">// Testes para diferentes configurações</span>
     }
-
-    resultados.close();
-    std::cout &lt;&lt; <span class="string">"Benchmark concluído. Resultados salvos em resultados_benchmark.csv\n"</span>;
-
+    
+    benchmark.imprimirRelatorio();
+    benchmark.salvarResultados(<span class="string">"resultados_benchmark.csv"</span>);
     <span class="keyword">return</span> <span class="number">0</span>;
 }
 </code></pre></div>
@@ -237,290 +203,176 @@
                     </details>
                 </article>
 
-                <!-- TabelaHashEncadeada.hpp -->
+                <!-- TabelaEncadeada.hpp -->
                 <article>
                     <details>
-                        <summary><code>include/TabelaHashEncadeada.hpp</code></summary>
+                        <summary><code>include/TabelaEncadeada.hpp</code></summary>
                         <div class="details-content">
                             <p class="text-gray-700 leading-relaxed mb-4">
-                                Arquivo de cabeçalho que define a interface da classe <code>TabelaHashEncadeada</code>. A estrutura principal (<code>tabela</code>) é um <code>std::vector</code> de <code>std::list&lt;int&gt;</code>, representando o array onde cada posição pode conter uma lista de elementos que colidiram naquele índice. Declara os métodos públicos para interagir com a tabela (<code>inserir</code>, <code>buscar</code>) e os métodos privados para as funções de hash (divisão e multiplicação).
+                                Arquivo de cabeçalho que define a interface da classe <code>TabelaEncadeada</code>. A estrutura principal utiliza um <code>std::vector</code> de ponteiros inteligentes para nós de listas encadeadas, representando o array onde cada posição pode conter uma lista de elementos que colidiram naquele índice. Declara os métodos públicos para interagir com a tabela e os métodos privados para as funções de hash (divisão e multiplicação).
                             </p>
-                            <div class="code-block"><pre><code><span class="preprocessor">#ifndef TABELA_HASH_ENCADEADA_HPP</span>
-<span class="preprocessor">#define TABELA_HASH_ENCADEADA_HPP</span>
+                            <div class="code-block"><pre><code><span class="preprocessor">#pragma once</span>
 
 <span class="preprocessor">#include &lt;vector&gt;</span>
-<span class="preprocessor">#include &lt;list&gt;</span>
-<span class="preprocessor">#include &lt;string&gt;</span>
-
-<span class="keyword">class</span> TabelaHashEncadeada {
-<span class="keyword">private</span>:
-    <span class="type">int</span> tamanho;
-    <span class="type">std::vector&lt;std::list&lt;int&gt;&gt;</span> tabela;
-    <span class="type">int</span> colisoes;
-
-    <span class="type">int</span> funcaoHashDivisao(<span class="type">int</span> chave);
-    <span class="type">int</span> funcaoHashMultiplicacao(<span class="type">int</span> chave);
-
-<span class="keyword">public</span>:
-    TabelaHashEncadeada(<span class="type">int</span> tam);
-    <span class="type">void</span> inserir(<span class="type">int</span> chave, <span class="keyword">const</span> <span class="type">std::string</span>&amp; func);
-    <span class="type">bool</span> buscar(<span class="type">int</span> chave, <span class="keyword">const</span> <span class="type">std::string</span>&amp; func);
-    <span class="type">int</span> getColisoes() <span class="keyword">const</span>;
-};
-
-<span class="preprocessor">#endif // TABELA_HASH_ENCADEADA_HPP</span>
-</code></pre></div>
-                        </div>
-                    </details>
-                </article>
-
-                <!-- TabelaHashEncadeada.cpp -->
-                <article>
-                    <details>
-                        <summary><code>src/TabelaHashEncadeada.cpp</code></summary>
-                        <div class="details-content">
-                            <p class="text-gray-700 leading-relaxed mb-4">
-                                Implementação dos métodos da <code>TabelaHashEncadeada</code>. O construtor aloca o vetor com o tamanho especificado. O método <code>inserir</code> calcula o índice usando a função de hash escolhida. Antes de inserir, ele verifica se a lista naquele índice já contém elementos; se sim, uma colisão é contada. A chave é inserida na lista apenas se ainda não estiver presente. O método <code>buscar</code> calcula o índice e percorre a lista correspondente para encontrar a chave.
-                            </p>
-                            <div class="code-block"><pre><code><span class="preprocessor">#include "TabelaHashEncadeada.hpp"</span>
-<span class="preprocessor">#include &lt;cmath&gt;</span>
-<span class="preprocessor">#include &lt;algorithm&gt;</span> <span class="comment">// Para std::find</span>
-
-TabelaHashEncadeada::TabelaHashEncadeada(<span class="type">int</span> tam) : tamanho(tam), colisoes(<span class="number">0</span>) {
-    tabela.resize(tamanho);
-}
-
-<span class="type">int</span> TabelaHashEncadeada::funcaoHashDivisao(<span class="type">int</span> chave) {
-    <span class="keyword">return</span> chave % tamanho;
-}
-
-<span class="type">int</span> TabelaHashEncadeada::funcaoHashMultiplicacao(<span class="type">int</span> chave) {
-    <span class="type">double</span> A = <span class="number">0.6180339887</span>; <span class="comment">// Constante (sqrt(5)-1)/2</span>
-    <span class="type">double</span> val = chave * A;
-    <span class="keyword">return</span> <span class="keyword">static_cast</span>&lt;<span class="type">int</span>&gt;(tamanho * (val - floor(val)));
-}
-
-<span class="type">void</span> TabelaHashEncadeada::inserir(<span class="type">int</span> chave, <span class="keyword">const</span> <span class="type">std::string</span>&amp; func) {
-    <span class="type">int</span> indice;
-    <span class="keyword">if</span> (func == <span class="string">"Divisao"</span>) {
-        indice = funcaoHashDivisao(chave);
-    } <span class="keyword">else</span> {
-        indice = funcaoHashMultiplicacao(chave);
-    }
-
-    <span class="comment">// Verifica se a chave já existe para não inserir duplicatas</span>
-    <span class="keyword">auto</span>&amp; lista = tabela[indice];
-    <span class="type">bool</span> chaveExiste = (std::find(lista.begin(), lista.end(), chave) != lista.end());
-
-    <span class="keyword">if</span> (!chaveExiste) {
-        <span class="keyword">if</span> (!lista.empty()) {
-            colisoes++;
-        }
-        lista.push_back(chave);
-    }
-}
-
-<span class="type">bool</span> TabelaHashEncadeada::buscar(<span class="type">int</span> chave, <span class="keyword">const</span> <span class="type">std::string</span>&amp; func) {
-    <span class="type">int</span> indice;
-    <span class="keyword">if</span> (func == <span class="string">"Divisao"</span>) {
-        indice = funcaoHashDivisao(chave);
-    } <span class="keyword">else</span> {
-        indice = funcaoHashMultiplicacao(chave);
-    }
-
-    <span class="keyword">for</span> (<span class="type">int</span> k : tabela[indice]) {
-        <span class="keyword">if</span> (k == chave) {
-            <span class="keyword">return</span> <span class="keyword">true</span>;
-        }
-    }
-    <span class="keyword">return</span> <span class="keyword">false</span>;
-}
-
-<span class="type">int</span> TabelaHashEncadeada::getColisoes() <span class="keyword">const</span> {
-    <span class="keyword">return</span> colisoes;
-}
-</code></pre></div>
-                        </div>
-                    </details>
-                </article>
-
-                <!-- TabelaHashAberta.hpp -->
-                <article>
-                    <details>
-                        <summary><code>include/TabelaHashAberta.hpp</code></summary>
-                        <div class="details-content">
-                            <p class="text-gray-700 leading-relaxed mb-4">
-                                Definição da classe <code>TabelaHashAberta</code>. A tabela é um único <code>std::vector&lt;int&gt;</code>. São definidas constantes para representar estados especiais: <code>VAZIO</code> e <code>REMOVIDO</code>, permitindo que a lógica de busca e inserção funcione corretamente mesmo após remoções (embora a remoção não tenha sido implementada neste trabalho). A interface pública é semelhante à da tabela encadeada.
-                            </p>
-                            <div class="code-block"><pre><code><span class="preprocessor">#ifndef TABELA_HASH_ABERTA_HPP</span>
-<span class="preprocessor">#define TABELA_HASH_ABERTA_HPP</span>
-
-<span class="preprocessor">#include &lt;vector&gt;</span>
-<span class="preprocessor">#include &lt;string&gt;</span>
-<span class="preprocessor">#include &lt;limits&gt;</span>
-
-<span class="keyword">class</span> TabelaHashAberta {
-<span class="keyword">private</span>:
-    <span class="type">int</span> tamanho;
-    <span class="type">std::vector&lt;int&gt;</span> tabela;
-    <span class="type">int</span> colisoes;
-    <span class="keyword">const</span> <span class="type">int</span> VAZIO = <span class="type">std::numeric_limits&lt;int&gt;::min</span>();
-    <span class="keyword">const</span> <span class="type">int</span> REMOVIDO = <span class="type">std::numeric_limits&lt;int&gt;::max</span>();
-
-    <span class="type">int</span> funcaoHashDivisao(<span class="type">int</span> chave);
-    <span class="type">int</span> funcaoHashMultiplicacao(<span class="type">int</span> chave);
-
-<span class="keyword">public</span>:
-    TabelaHashAberta(<span class="type">int</span> tam);
-    <span class="type">void</span> inserir(<span class="type">int</span> chave, <span class="keyword">const</span> <span class="type">std::string</span>&amp; func);
-    <span class="type">bool</span> buscar(<span class="type">int</span> chave, <span class="keyword">const</span> <span class="type">std::string</span>&amp; func);
-    <span class="type">int</span> getColisoes() <span class="keyword">const</span>;
-};
-
-<span class="preprocessor">#endif // TABELA_HASH_ABERTA_HPP</span>
-</code></pre></div>
-                        </div>
-                    </details>
-                </article>
-
-                <!-- TabelaHashAberta.cpp -->
-                <article>
-                    <details>
-                        <summary><code>src/TabelaHashAberta.cpp</code></summary>
-                        <div class="details-content">
-                            <p class="text-gray-700 leading-relaxed mb-4">
-                                Implementação da <code>TabelaHashAberta</code>. O construtor inicializa todas as posições do vetor com o valor <code>VAZIO</code>. O método <code>inserir</code> calcula um índice inicial. Se a posição estiver ocupada, ele inicia a sondagem linear (<code>(indice + 1) % tamanho</code>), incrementando o contador de colisões e procurando a próxima posição livre. A chave é inserida na primeira posição <code>VAZIO</code> ou <code>REMOVIDO</code> encontrada. A busca segue a mesma lógica de sondagem até encontrar a chave ou uma posição <code>VAZIO</code>.
-                            </p>
-                            <div class="code-block"><pre><code><span class="preprocessor">#include "TabelaHashAberta.hpp"</span>
+<span class="preprocessor">#include &lt;memory&gt;</span>
+<span class="preprocessor">#include &lt;stdexcept&gt;</span>
 <span class="preprocessor">#include &lt;cmath&gt;</span>
 
-TabelaHashAberta::TabelaHashAberta(<span class="type">int</span> tam) : tamanho(tam), colisoes(<span class="number">0</span>) {
-    tabela.assign(tamanho, VAZIO);
-}
-
-<span class="type">int</span> TabelaHashAberta::funcaoHashDivisao(<span class="type">int</span> chave) {
-    <span class="keyword">return</span> chave % tamanho;
-}
-
-<span class="type">int</span> TabelaHashAberta::funcaoHashMultiplicacao(<span class="type">int</span> chave) {
-    <span class="type">double</span> A = <span class="number">0.6180339887</span>;
-    <span class="type">double</span> val = chave * A;
-    <span class="keyword">return</span> <span class="keyword">static_cast</span>&lt;<span class="type">int</span>&gt;(tamanho * (val - floor(val)));
-}
-
-<span class="type">void</span> TabelaHashAberta::inserir(<span class="type">int</span> chave, <span class="keyword">const</span> <span class="type">std::string</span>&amp; func) {
-    <span class="type">int</span> indice;
-    <span class="keyword">if</span> (func == <span class="string">"Divisao"</span>) {
-        indice = funcaoHashDivisao(chave);
-    } <span class="keyword">else</span> {
-        indice = funcaoHashMultiplicacao(chave);
-    }
-
-    <span class="keyword">if</span> (tabela[indice] != VAZIO && tabela[indice] != REMOVIDO) {
-        colisoes++;
-    }
-
-    <span class="keyword">while</span> (tabela[indice] != VAZIO && tabela[indice] != REMOVIDO) {
-        indice = (indice + <span class="number">1</span>) % tamanho;
-    }
-    tabela[indice] = chave;
-}
-
-<span class="type">bool</span> TabelaHashAberta::buscar(<span class="type">int</span> chave, <span class="keyword">const</span> <span class="type">std::string</span>&amp; func) {
-    <span class="type">int</span> indice;
-    <span class="keyword">if</span> (func == <span class="string">"Divisao"</span>) {
-        indice = funcaoHashDivisao(chave);
-    } <span class="keyword">else</span> {
-        indice = funcaoHashMultiplicacao(chave);
-    }
-
-    <span class="type">int</span> i = <span class="number">0</span>;
-    <span class="keyword">while</span> (tabela[indice] != VAZIO && i &lt; tamanho) {
-        <span class="keyword">if</span> (tabela[indice] == chave) {
-            <span class="keyword">return</span> <span class="keyword">true</span>;
-        }
-        indice = (indice + <span class="number">1</span>) % tamanho;
-        i++;
-    }
-    <span class="keyword">return</span> <span class="keyword">false</span>;
-}
-
-<span class="type">int</span> TabelaHashAberta::getColisoes() <span class="keyword">const</span> {
-    <span class="keyword">return</span> colisoes;
-}
-</code></pre></div>
-                        </div>
-                    </details>
-                </article>
-
-                <!-- GeradorDados.hpp -->
-                <article>
-                    <details>
-                        <summary><code>include/GeradorDados.hpp</code></summary>
-                        <div class="details-content">
-                            <p class="text-gray-700 leading-relaxed mb-4">
-                                Cabeçalho da classe utilitária <code>GeradorDados</code>. Expõe um único método estático público, <code>gerar</code>, que é responsável por criar um arquivo de texto com uma quantidade definida de números aleatórios.
-                            </p>
-                            <div class="code-block"><pre><code><span class="preprocessor">#ifndef GERADOR_DADOS_HPP</span>
-<span class="preprocessor">#define GERADOR_DADOS_HPP</span>
-
-<span class="preprocessor">#include &lt;string&gt;</span>
-<span class="preprocessor">#include &lt;vector&gt;</span>
-
-<span class="keyword">class</span> GeradorDados {
-<span class="keyword">public</span>:
-    <span class="keyword">static</span> <span class="type">void</span> gerar(<span class="type">int</span> quantidade, <span class="keyword">const</span> <span class="type">std::string</span>&amp; nomeArquivo);
-};
-
-<span class="preprocessor">#endif // GERADOR_DADOS_HPP</span>
-</code></pre></div>
-                        </div>
-                    </details>
-                </article>
-
-                <!-- GeradorDados.cpp -->
-                <article>
-                    <details>
-                        <summary><code>src/GeradorDados.cpp</code></summary>
-                        <div class="details-content">
-                            <p class="text-gray-700 leading-relaxed mb-4">
-                                Implementação do gerador de dados. O método <code>gerar</code> utiliza as bibliotecas <code>&lt;random&gt;</code> e <code>&lt;set&gt;</code> do C++ moderno para gerar números aleatórios de alta qualidade e garantir que não haja duplicatas no conjunto de dados. Ele cria um arquivo de texto no diretório <code>data/</code> e escreve os números gerados, um por linha.
-                            </p>
-                            <div class="code-block"><pre><code><span class="preprocessor">#include "GeradorDados.hpp"</span>
-<span class="preprocessor">#include &lt;fstream&gt;</span>
-<span class="preprocessor">#include &lt;random&gt;</span>
-<span class="preprocessor">#include &lt;set&gt;</span>
-<span class="preprocessor">#include &lt;iostream&gt;</span>
-
-<span class="type">void</span> GeradorDados::gerar(<span class="type">int</span> quantidade, <span class="keyword">const</span> <span class="type">std::string</span>&amp; nomeArquivo) {
-    <span class="type">std::ofstream</span> arquivo(nomeArquivo);
-    <span class="keyword">if</span> (!arquivo.is_open()) {
-        std::cerr &lt;&lt; <span class="string">"Erro ao abrir o arquivo para escrita: "</span> &lt;&lt; nomeArquivo &lt;&lt; std::endl;
-        <span class="keyword">return</span>;
-    }
-
-    <span class="type">std::random_device</span> rd;
-    <span class="type">std::mt19937</span> gen(rd());
-    <span class="type">std::uniform_int_distribution&lt;&gt;</span> distrib(<span class="number">1</span>, quantidade * <span class="number">10</span>);
+<span class="keyword">struct</span> No {
+    <span class="type">int</span> valor;
+    <span class="type">std::unique_ptr&lt;No&gt;</span> proximo;
     
-    <span class="type">std::set&lt;int&gt;</span> numerosUnicos;
-    <span class="keyword">while</span> (numerosUnicos.size() &lt; quantidade) {
-        numerosUnicos.insert(distrib(gen));
-    }
+    <span class="keyword">explicit</span> No(<span class="type">int</span> val) : valor(val), proximo(<span class="keyword">nullptr</span>) {}
+};
 
-    <span class="keyword">for</span> (<span class="type">int</span> numero : numerosUnicos) {
-        arquivo &lt;&lt; numero &lt;&lt; <span class="string">"\n"</span>;
-    }
+<span class="keyword">class</span> TabelaEncadeada {
+<span class="keyword">private</span>:
+    <span class="type">std::vector&lt;std::unique_ptr&lt;No&gt;&gt;</span> tabela;
+    <span class="type">size_t</span> tamanho;
+    <span class="type">size_t</span> numElementos;
+    
+    <span class="keyword">static</span> <span class="keyword">constexpr</span> <span class="type">double</span> CONSTANTE_MULTIPLICACAO = <span class="number">0.6180339887</span>;
+    
+<span class="keyword">public</span>:
+    <span class="keyword">enum</span> <span class="keyword">class</span> TipoHash { 
+        DIVISAO,
+        MULTIPLICACAO
+    };
+    
+    <span class="keyword">explicit</span> TabelaEncadeada(<span class="type">size_t</span> tam);
+    
+    <span class="type">void</span> inserir(<span class="type">int</span> valor, TipoHash tipo);
+    <span class="type">bool</span> buscar(<span class="type">int</span> valor, TipoHash tipo) <span class="keyword">const</span>;
+    <span class="type">bool</span> remover(<span class="type">int</span> valor, TipoHash tipo);
+    
+    <span class="type">size_t</span> calcularHashDivisao(<span class="type">int</span> chave) <span class="keyword">const</span>;
+    <span class="type">size_t</span> calcularHashMultiplicacao(<span class="type">int</span> chave) <span class="keyword">const</span>;
+    
+    <span class="type">double</span> fatorCarga() <span class="keyword">const</span>;
+    <span class="type">size_t</span> getNumElementos() <span class="keyword">const</span>;
+    <span class="type">size_t</span> getTamanho() <span class="keyword">const</span>;
+};
+</code></pre></div>
+                        </div>
+                    </details>
+                </article>
 
-    arquivo.close();
-}
+                <!-- TabelaAberta.hpp -->
+                <article>
+                    <details>
+                        <summary><code>include/TabelaAberta.hpp</code></summary>
+                        <div class="details-content">
+                            <p class="text-gray-700 leading-relaxed mb-4">
+                                Definição da classe <code>TabelaAberta</code>. Utiliza uma estrutura <code>Celula</code> que pode estar em três estados: VAZIO, OCUPADO ou REMOVIDO. A tabela é um único <code>std::vector&lt;Celula&gt;</code>. Implementa sondagem linear para resolução de colisões e controle automático de fator de carga, permitindo lazy deletion para remoções eficientes.
+                            </p>
+                            <div class="code-block"><pre><code><span class="preprocessor">#pragma once</span>
+
+<span class="preprocessor">#include &lt;vector&gt;</span>
+<span class="preprocessor">#include &lt;optional&gt;</span>
+<span class="preprocessor">#include &lt;stdexcept&gt;</span>
+
+<span class="keyword">struct</span> Celula {
+    <span class="keyword">enum</span> <span class="keyword">class</span> Estado { 
+        VAZIO,
+        OCUPADO,
+        REMOVIDO
+    };
+    
+    <span class="type">int</span> valor;
+    Estado estado;
+    
+    Celula() : valor(<span class="number">0</span>), estado(Estado::VAZIO) {}
+    <span class="keyword">explicit</span> Celula(<span class="type">int</span> val) : valor(val), estado(Estado::OCUPADO) {}
+    
+    <span class="type">void</span> marcarRemovido();
+    <span class="type">bool</span> disponivelParaInsercao() <span class="keyword">const</span>;
+};
+
+<span class="keyword">class</span> TabelaAberta {
+<span class="keyword">private</span>:
+    <span class="type">std::vector&lt;Celula&gt;</span> tabela;
+    <span class="type">size_t</span> tamanho;
+    <span class="type">size_t</span> numElementos;
+    <span class="type">size_t</span> numRemovidos;
+    
+    <span class="keyword">static</span> <span class="keyword">constexpr</span> <span class="type">double</span> CONSTANTE_MULTIPLICACAO = <span class="number">0.6180339887</span>;
+    <span class="keyword">static</span> <span class="keyword">constexpr</span> <span class="type">double</span> MAX_FATOR_CARGA = <span class="number">0.7</span>;
+    
+    <span class="type">size_t</span> sondagemLinear(<span class="type">size_t</span> indiceInicial, <span class="type">int</span> valor, <span class="type">bool</span> paraInsercao = <span class="keyword">false</span>) <span class="keyword">const</span>;
+    
+<span class="keyword">public</span>:
+    <span class="keyword">enum</span> <span class="keyword">class</span> TipoHash { 
+        DIVISAO,
+        MULTIPLICACAO
+    };
+    
+    <span class="keyword">explicit</span> TabelaAberta(<span class="type">size_t</span> tam);
+    
+    <span class="type">void</span> inserir(<span class="type">int</span> valor, TipoHash tipo);
+    <span class="type">bool</span> buscar(<span class="type">int</span> valor, TipoHash tipo) <span class="keyword">const</span>;
+    <span class="type">std::optional&lt;int&gt;</span> remover(<span class="type">int</span> valor, TipoHash tipo);
+    
+    <span class="type">double</span> fatorCarga() <span class="keyword">const</span>;
+    <span class="type">bool</span> precisaRehash() <span class="keyword">const</span>;
+};
+</code></pre></div>
+                        </div>
+                    </details>
+                </article>
+
+                <!-- CarregadorDados.hpp -->
+                <article>
+                    <details>
+                        <summary><code>include/CarregadorDados.hpp</code></summary>
+                        <div class="details-content">
+                            <p class="text-gray-700 leading-relaxed mb-4">
+                                Classe responsável por gerenciar dados para testes de tabelas hash. Sua função principal é <strong>carregar</strong> dados de arquivos existentes na pasta <code>data/</code>, mas também oferece funcionalidades para gerar dados aleatórios para testes adicionais, validar a integridade dos arquivos de dados e fornecer estatísticas sobre os datasets. O nome reflete melhor sua funcionalidade principal de carregamento.
+                            </p>
+                            <div class="code-block"><pre><code><span class="preprocessor">#pragma once</span>
+
+<span class="preprocessor">#include &lt;vector&gt;</span>
+<span class="preprocessor">#include &lt;string&gt;</span>
+<span class="preprocessor">#include &lt;fstream&gt;</span>
+<span class="preprocessor">#include &lt;stdexcept&gt;</span>
+<span class="preprocessor">#include &lt;random&gt;</span>
+<span class="preprocessor">#include &lt;filesystem&gt;</span>
+
+<span class="keyword">class</span> CarregadorDados {
+<span class="keyword">private</span>:
+    <span class="type">std::mt19937</span> gerador;
+    <span class="type">std::uniform_int_distribution&lt;int&gt;</span> distribuicao;
+    
+    <span class="type">bool</span> arquivoExiste(<span class="keyword">const</span> <span class="type">std::string</span>&amp; nomeArquivo) <span class="keyword">const</span>;
+    <span class="type">std::string</span> trim(<span class="keyword">const</span> <span class="type">std::string</span>&amp; str) <span class="keyword">const</span>;
+
+<span class="keyword">public</span>:
+    <span class="keyword">explicit</span> CarregadorDados(<span class="type">unsigned</span> <span class="type">int</span> seed = <span class="type">std::random_device</span>{}(), 
+                         <span class="type">int</span> minimo = <span class="number">1</span>, 
+                         <span class="type">int</span> maximo = <span class="number">1000000</span>);
+    
+    <span class="comment">/**
+     * @brief Carrega números de um arquivo de texto
+     * Formato esperado:
+     * - Primeira linha: quantidade de números
+     * - Linhas seguintes: um número por linha
+     */</span>
+    <span class="type">std::vector&lt;int&gt;</span> carregarDeArquivo(<span class="keyword">const</span> <span class="type">std::string</span>&amp; nomeArquivo);
+    
+    <span class="type">std::vector&lt;int&gt;</span> gerarNumerosAleatorios(<span class="type">size_t</span> quantidade);
+    <span class="type">std::vector&lt;int&gt;</span> gerarNumerosAleatoriosComRepeticao(<span class="type">size_t</span> quantidade);
+    
+    <span class="type">bool</span> salvarEmArquivo(<span class="keyword">const</span> <span class="type">std::vector&lt;int&gt;</span>&amp; numeros, <span class="keyword">const</span> <span class="type">std::string</span>&amp; nomeArquivo);
+    <span class="type">bool</span> validarArquivo(<span class="keyword">const</span> <span class="type">std::string</span>&amp; nomeArquivo) <span class="keyword">const</span>;
+    
+    <span class="type">std::vector&lt;std::string&gt;</span> listarArquivosDisponiveis() <span class="keyword">const</span>;
+    <span class="type">void</span> exibirEstatisticas(<span class="keyword">const</span> <span class="type">std::string</span>&amp; nomeArquivo) <span class="keyword">const</span>;
+};
 </code></pre></div>
                         </div>
                     </details>
                 </article>
             </div>
         </section>
-
 
         <!-- Resultados e Gráficos -->
         <section id="graficos" class="bg-white p-6 rounded-lg shadow">
@@ -572,13 +424,13 @@ TabelaHashAberta::TabelaHashAberta(<span class="type">int</span> tam) : tamanho(
         <section id="conclusao" class="mt-12 bg-white p-6 rounded-lg shadow">
             <h2 class="text-2xl font-semibold mb-4 border-b pb-2">5. Conclusão</h2>
             <p class="text-gray-700 leading-relaxed">
-                A análise comparativa revelou insights importantes sobre o comportamento das diferentes estratégias de hashing. A Tabela Hash <strong>Encadeada</strong> demonstrou ser mais robusta e previsível, especialmente em cenários com alto fator de carga, onde o desempenho de inserção e busca degrada de forma mais suave. Embora possa consumir mais memória devido às listas, sua performance é menos sensível à qualidade da função de hash.
+                A análise comparativa revelou insights importantes sobre o comportamento das diferentes estratégias de hashing. A <strong>TabelaEncadeada</strong> demonstrou ser mais robusta e previsível, especialmente em cenários com alto fator de carga, onde o desempenho de inserção e busca degrada de forma mais suave. Embora possa consumir mais memória devido às listas, sua performance é menos sensível à qualidade da função de hash.
             </p>
             <p class="text-gray-700 leading-relaxed mt-4">
-                Por outro lado, a Tabela Hash com <strong>Endereçamento Aberto</strong> se mostrou extremamente eficiente em cenários de baixo fator de carga, superando a versão encadeada devido à melhor localidade de cache e menor sobrecarga de alocação de memória. No entanto, seu desempenho decai drasticamente à medida que a tabela se aproxima de sua capacidade máxima, tornando-a inadequada para cenários onde o número de elementos é próximo ao tamanho da tabela.
+                Por outro lado, a <strong>TabelaAberta</strong> se mostrou extremamente eficiente em cenários de baixo fator de carga, superando a versão encadeada devido à melhor localidade de cache e menor sobrecarga de alocação de memória. No entanto, seu desempenho decai drasticamente à medida que a tabela se aproxima de sua capacidade máxima, tornando-a inadequada para cenários onde o número de elementos é próximo ao tamanho da tabela.
             </p>
              <p class="text-gray-700 leading-relaxed mt-4">
-                Entre as funções de hash, não houve um vencedor claro em todos os cenários, mas a função de <strong>divisão por um primo</strong> apresentou, em média, uma distribuição ligeiramente melhor e menos colisões, principalmente para a tabela de endereçamento aberto. A escolha da abordagem ideal depende, portanto, dos requisitos específicos da aplicação, como a previsibilidade do número de elementos, as restrições de memória e a performance desejada.
+                Entre as funções de hash, não houve um vencedor claro em todos os cenários, mas a função de <strong>divisão</strong> apresentou, em média, uma distribuição ligeiramente melhor e menos colisões, principalmente para a tabela de endereçamento aberto. A escolha da abordagem ideal depende, portanto, dos requisitos específicos da aplicação, como a previsibilidade do número de elementos, as restrições de memória e a performance desejada.
             </p>
         </section>
 
@@ -840,4 +692,3 @@ Aberta,50021,50000,Multiplicacao,15.178,7.741,24982,0.9996`;
     </script>
 </body>
 </html>
-
