@@ -26,8 +26,8 @@
     @media (max-width:900px){.twocol{grid-template-columns:1fr}}
     .muted{color:var(--muted)}
     .tag{display:inline-block;margin:0 6px 6px 0;padding:4px 10px;border:1px solid #28436a;border-radius:20px;color:#bcd5ff;font-size:13px}
-    .btn{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(90deg,#2563eb,#0ea5e9);border:none;padding:12px 18px;border-radius:8px;color:#fff;font-weight:600;text-decoration:none;transition:transform .2s}
-    .btn:hover{transform:translateY(-2px)}
+    .btn{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(90deg,#2563eb,#0ea5e9);border:none;padding:8px 12px;border-radius:6px;color:#fff;font-weight:600;text-decoration:none;cursor:pointer}
+    .btn-row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 0}
     pre{background:#0d162b;border:1px solid #1d2a49;border-radius:8px;padding:16px;overflow-x:auto;margin:12px 0}
     code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;color:#e2e8f0}
     .chart-container{background:#0f1b35;border:1px solid #1d2a49;border-radius:8px;padding:16px;margin:16px 0}
@@ -37,15 +37,6 @@
     .code-section h4{margin-bottom:8px}
     .explanation{background:#0a1528;border-left:4px solid #4da3ff;padding:12px 16px;margin:10px 0;border-radius:0 6px 6px 0}
     ul li{margin:6px 0}
-    /* Prism theme */
-    .token.comment{color:#7c7c7c !important}
-    .token.keyword{color:#93c5fd !important}
-    .token.string{color:#86efac !important}
-    .token.function{color:#fbbf24 !important}
-    .token.number{color:#fcd34d !important}
-    .token.operator{color:#f8fafc !important}
-    .token.punctuation{color:#cbd5e1 !important}
-    .token.class-name{color:#f472b6 !important}
   </style>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
   <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-core.min.js"></script>
@@ -72,254 +63,108 @@
   </header>
 
   <main class="container">
-    <section id="intro" class="section">
-      <div class="twocol">
-        <div>
-          <h2>Introdução</h2>
-          <p>Este trabalho implementa e compara duas estratégias de tratamento de colisões em tabelas hash — <b>listas encadeadas</b> (chaining) e <b>endereçamento aberto</b> (sondagem linear) — aliadas a duas funções de hashing: <b>divisão</b> e <b>multiplicação</b>. O estudo quantifica <b>tempo de inserção</b>, <b>tempo de busca</b>, <b>colisões</b> e <b>fator de carga</b> com datasets de 100 a 50.000 elementos, em C++17.</p>
-          <div>
-            <span class="tag">C++17</span>
-            <span class="tag">Encadeamento</span>
-            <span class="tag">Endereçamento Aberto</span>
-            <span class="tag">Divisão</span>
-            <span class="tag">Multiplicação</span>
-            <span class="tag">Benchmarks</span>
-          </div>
-        </div>
-        <div style="background:var(--card);border:1px solid #203052;border-radius:8px;padding:16px">
-          <h3>Funções Hash</h3>
-          <p class="muted"><b>Divisão:</b> h(k) = k mod p</p>
-          <p class="muted"><b>Multiplicação:</b> h(k) = ⌊ frac(k×c) × p ⌋, com c ≈ 0,618</p>
-          <p class="muted">Para encadeamento, tamanhos <i>primos</i> (29, 97, 251, 499, 911) favorecem distribuição; para aberto, tabela fixa 50.009.</p>
-        </div>
-      </div>
-    </section>
-
-    <section id="metodologia" class="section">
-      <h2>Metodologia</h2>
-      <p>Os experimentos inserem e buscam inteiros provenientes de arquivos de dados, medindo tempos com relógio de alta resolução. Para cada dataset, testamos <b>encadeamento</b> com cinco tamanhos de tabela e <b>endereçamento aberto</b> com tamanho fixo. Os arquivos de 100 a 50.000 elementos foram usados, e 1.000 números aleatórios (com repetição) serviram para as buscas.</p>
-      <ul>
-        <li><b>Métricas:</b> Tempo de Inserção (ms), Tempo de Busca (ms), Colisões, Fator de Carga</li>
-        <li><b>Dados:</b> resultados_benchmark.csv gerado pelo programa</li>
-        <li><b>Medição:</b> std::chrono::high_resolution_clock para precisão</li>
-      </ul>
-    </section>
-
-    <section id="implementacao" class="section">
-      <h2>Implementação</h2>
-      
-      <h3>Estrutura do Projeto</h3>
-      <pre><code class="language-bash">analise_hash/
-├── include/                  # Cabeçalhos (.hpp)
-│   ├── TabelaHashEncadeada.hpp
-│   ├── TabelaHashAberta.hpp
-│   └── GeradorDados.hpp
-├── src/                     # Implementações (.cpp)
-│   ├── main.cpp
-│   ├── TabelaHashEncadeada.cpp
-│   ├── TabelaHashAberta.cpp
-│   └── GeradorDados.cpp
-├── data/                    # Datasets
-│   ├── numeros_aleatorios_100.txt
-│   └── ... (até 50.000 elementos)
-├── resultados_benchmark.csv
-├── index.html
-└── CMakeLists.txt</code></pre>
-
-      <div class="code-section">
-        <h3>TabelaHashEncadeada.hpp/.cpp</h3>
-        <div class="explanation">
-          <p><b>Propósito:</b> Define e implementa a tabela hash com encadeamento. Cada posição armazena uma lista encadeada de colisões. Evita duplicatas, calcula fator de carga e provê estatísticas de distribuição.</p>
-        </div>
-        
-        <h4>Estrutura do Nó</h4>
-        <pre><code class="language-cpp">struct No {
-  int valor;                           // Valor armazenado
-  std::unique_ptr&lt;No&gt; proximo;        // Próximo elemento na lista
-  explicit No(int val) : valor(val), proximo(nullptr) {}
-};</code></pre>
-        <div class="explanation">
-          <p><b>Memória:</b> <code>unique_ptr</code> elimina necessidade de <code>delete</code>, evitando vazamentos. Listas são desalocadas automaticamente.</p>
-        </div>
-
-        <h4>Funções de Hash</h4>
-        <pre><code class="language-cpp">// Divisão (usa números primos para melhor distribuição)
-size_t calcularHashDivisao(int chave) const {
-  return static_cast&lt;size_t&gt;(std::abs(chave)) % tamanho;
-}
-// Multiplicação (fração áurea)
-size_t calcularHashMultiplicacao(int chave) const {
-  double prod = std::abs(chave) * 0.6180339887;
-  double frac = prod - std::floor(prod);
-  return static_cast&lt;size_t&gt;(std::floor(frac * tamanho));
-}</code></pre>
-
-        <h4>Inserção, Busca e Remoção</h4>
-        <pre><code class="language-cpp">void inserir(int valor, TipoHash tipo) {
-  size_t i = (tipo == TipoHash::DIVISAO) ? calcularHashDivisao(valor)
-                                         : calcularHashMultiplicacao(valor);
-  if (buscar(valor, tipo)) return;           // evita duplicata
-  auto novo = std::make_unique&lt;No&gt;(valor);
-  novo-&gt;proximo = std::move(tabela[i]);      // insere na cabeça (O(1))
-  tabela[i] = std::move(novo);
-  ++numElementos;
-}
-
-bool buscar(int valor, TipoHash tipo) const {
-  size_t i = (tipo == TipoHash::DIVISAO) ? calcularHashDivisao(valor)
-                                         : calcularHashMultiplicacao(valor);
-  for (const No* p = tabela[i].get(); p; p = p-&gt;proximo.get()) {
-    if (p-&gt;valor == valor) return true;
-  }
-  return false;
-}
-
-bool remover(int valor, TipoHash tipo) {
-  size_t i = (tipo == TipoHash::DIVISAO) ? calcularHashDivisao(valor)
-                                         : calcularHashMultiplicacao(valor);
-  if (tabela[i] && tabela[i]-&gt;valor == valor) {          // caso cabeça
-    tabela[i] = std::move(tabela[i]-&gt;proximo);
-    --numElementos; return true;
-  }
-  for (No* p = tabela[i].get(); p && p-&gt;proximo; p = p-&gt;proximo.get()) {
-    if (p-&gt;proximo-&gt;valor == valor) {
-      p-&gt;proximo = std::move(p-&gt;proximo-&gt;proximo);
-      --numElementos; return true;
-    }
-  }
-  return false;
-}</code></pre>
-        <div class="explanation">
-          <p><b>Complexidade Média:</b> Inserção O(1), busca/remoção O(1) amortizado. No pior caso (muitas colisões), O(n) por posição.</p>
-        </div>
-      </div>
-
-      <div class="code-section">
-        <h3>TabelaHashAberta.hpp/.cpp</h3>
-        <div class="explanation">
-          <p><b>Propósito:</b> Implementa endereçamento aberto com <b>sondagem linear</b>, <b>lazy deletion</b> e limites de fator de carga. Mede sondagens e clustering.</p>
-        </div>
-
-        <h4>Estados da Célula</h4>
-        <pre><code class="language-cpp">struct Celula {
-  enum class Estado { VAZIO, OCUPADO, REMOVIDO };
-  int valor; Estado estado;
-  Celula() : valor(0), estado(Estado::VAZIO) {}
-  explicit Celula(int val) : valor(val), estado(Estado::OCUPADO) {}
-  bool disponivelParaInsercao() const { return estado != Estado::OCUPADO; }
-};</code></pre>
-
-        <h4>Sondagem Linear e Inserção</h4>
-        <pre><code class="language-cpp">size_t sondagemLinear(size_t idx0, int valor, bool paraInsercao) const {
-  size_t tent = 0, i = idx0;
-  while (tent &lt; tamanho) {
-    const Celula &c = tabela[i];
-    if (paraInsercao) {
-      if (c.disponivelParaInsercao()) return i;              // VAZIO ou REMOVIDO
-      if (c.estado == Celula::Estado::OCUPADO && c.valor == valor) return i; // duplicata
-    } else {
-      if (c.estado == Celula::Estado::VAZIO) return tamanho; // não existe
-      if (c.estado == Celula::Estado::OCUPADO && c.valor == valor) return i; // achou
-    }
-    i = (i + 1) % tamanho; ++tent;
-  }
-  return tamanho; // não encontrou
-}
-
-void inserir(int valor, TipoHash tipo) {
-  if (precisaRehash()) throw std::runtime_error("Fator de carga alto: rehash necessário");
-  size_t h = (tipo == TipoHash::DIVISAO) ? calcularHashDivisao(valor)
-                                         : calcularHashMultiplicacao(valor);
-  size_t i = sondagemLinear(h, valor, true);
-  if (i &gt;= tamanho) throw std::runtime_error("Tabela cheia");
-  if (tabela[i].estado == Celula::Estado::OCUPADO && tabela[i].valor == valor) return; // duplicata
-  if (tabela[i].estado == Celula::Estado::REMOVIDO) --numRemovidos;
-  tabela[i] = Celula(valor); ++numElementos;
-}</code></pre>
-        <div class="explanation">
-          <p><b>Rehash:</b> A classe expõe <code>precisaRehash()</code> quando <i>fator de carga</i> ou <i>ocupação</i> ultrapassam limites configurados, preservando a performance média O(1).</p>
-        </div>
-      </div>
-
-      <div class="code-section">
-        <h3>GeradorDados.hpp/.cpp</h3>
-        <div class="explanation">
-          <p><b>Propósito:</b> Carrega arquivos existentes, gera números aleatórios (com/sem repetição), valida formato e estatísticas, e escreve relatórios (incluindo o CSV consolidado).</p>
-        </div>
-        <pre><code class="language-cpp">// Assinaturas principais
-std::vector&lt;int&gt; carregarDeArquivo(const std::string &nomeArquivo);
-std::vector&lt;int&gt; gerarNumerosAleatorios(size_t quantidade);
-std::vector&lt;int&gt; gerarNumerosAleatoriosComRepeticao(size_t quantidade);
-bool salvarEmArquivo(const std::vector&lt;int&gt;&numeros, const std::string &nomeArquivo);
-GeradorDados::InfoDataset analisarDataset(const std::string &nomeArquivo);
-</code></pre>
-      </div>
-
-      <div class="code-section">
-        <h3>main.cpp</h3>
-        <div class="explanation">
-          <p><b>Responsável:</b> Orquestra benchmarks, mede tempos, calcula colisões e fator de carga, imprime relatório e salva <code>resultados_benchmark.csv</code>.</p>
-        </div>
-        <pre><code class="language-cpp">template&lt;typename Func&gt; double medirTempo(Func &amp;&amp;f);
-void testarTabelaEncadeada(...);
-void testarTabelaAberta(...);
-void salvarResultados(const std::string &arquivo);
-</code></pre>
-      </div>
-    </section>
-
     <section id="resultados" class="section">
       <h2>Resultados</h2>
-      
+
       <div class="chart-container">
         <h3>Comparação de Tempo de Inserção</h3>
         <canvas id="g_insercao" class="chart"></canvas>
+        <div class="btn-row">
+          <button class="btn" data-download="g_insercao">Baixar PNG</button>
+          <button class="btn" data-download-pdf="g_insercao">Baixar PDF</button>
+          <button class="btn" data-download-csv="insercao">Baixar CSV</button>
+        </div>
       </div>
-      
+
       <div class="chart-container">
         <h3>Comparação de Tempo de Busca</h3>
         <canvas id="g_busca" class="chart"></canvas>
+        <div class="btn-row">
+          <button class="btn" data-download="g_busca">Baixar PNG</button>
+          <button class="btn" data-download-pdf="g_busca">Baixar PDF</button>
+          <button class="btn" data-download-csv="busca">Baixar CSV</button>
+        </div>
       </div>
-      
+
       <div class="chart-container">
-        <h3>Comparação de Funções Hash (Inserção)</h3>
-        <canvas id="g_funcoes" class="chart"></canvas>
+        <h3>Comparação de Funções Hash (Inserção - Encadeada, 10.000)</h3>
+        <canvas id="g_funcoes_enc" class="chart"></canvas>
+        <div class="btn-row">
+          <button class="btn" data-download="g_funcoes_enc">Baixar PNG</button>
+          <button class="btn" data-download-pdf="g_funcoes_enc">Baixar PDF</button>
+          <button class="btn" data-download-csv="funcoes_enc">Baixar CSV</button>
+        </div>
       </div>
-      
+
       <div class="chart-container">
-        <h3>Relação Fator de Carga × Colisões</h3>
+        <h3>Comparação de Funções Hash (Inserção - Aberta)</h3>
+        <canvas id="g_funcoes_ab" class="chart"></canvas>
+        <div class="btn-row">
+          <button class="btn" data-download="g_funcoes_ab">Baixar PNG</button>
+          <button class="btn" data-download-pdf="g_funcoes_ab">Baixar PDF</button>
+          <button class="btn" data-download-csv="funcoes_ab">Baixar CSV</button>
+        </div>
+      </div>
+
+      <div class="chart-container">
+        <h3>Relação Fator de Carga × Colisões (Encadeadas)</h3>
         <canvas id="g_carga_colisao" class="chart"></canvas>
+        <div class="btn-row">
+          <button class="btn" data-download="g_carga_colisao">Baixar PNG</button>
+          <button class="btn" data-download-pdf="g_carga_colisao">Baixar PDF</button>
+          <button class="btn" data-download-csv="carga_colisao">Baixar CSV</button>
+        </div>
       </div>
-      
+
       <div class="chart-container">
-        <h3>Clustering e Sondagem — Tabela Aberta</h3>
+        <h3>Tabela Aberta: Heurística de Sondagens × Fator de Carga</h3>
         <canvas id="g_aberta_cluster" class="chart"></canvas>
+        <div class="btn-row">
+          <button class="btn" data-download="g_aberta_cluster">Baixar PNG</button>
+          <button class="btn" data-download-pdf="g_aberta_cluster">Baixar PDF</button>
+          <button class="btn" data-download-csv="aberta_cluster">Baixar CSV</button>
+        </div>
       </div>
-      
-      <p class="muted">Fonte: dados empíricos do arquivo <code>resultados_benchmark.csv</code> gerado pela aplicação C++.</p>
     </section>
-
-    <section id="discussao" class="section">
-      <h2>Discussão</h2>
-      <p><b>Encadeamento</b> apresenta estabilidade mesmo com alto fator de carga, à custa de memória adicional para ponteiros das listas. <b>Endereçamento aberto</b> é eficiente em espaço, mas sofre com <i>clustering</i> e degradação de performance com fatores de carga elevados, exigindo estratégias de rehash.</p>
-      <p>A função de <b>divisão</b> tendeu a ser mais rápida nos testes práticos, enquanto a de <b>multiplicação</b> oferece distribuição teórica mais uniforme, especialmente independente do tamanho da tabela.</p>
-    </section>
-
-    <section id="conclusao" class="section">
-      <h2>Conclusão</h2>
-      <p>As duas estratégias são viáveis em diferentes cenários: para cargas altas e inserções intensivas, o <b>encadeamento</b> manteve tempos competitivos e previsíveis; para economia de espaço e consultas rápidas em baixas cargas, o <b>endereçamento aberto</b> se mostrou atrativo.</p>
-      <p>Controlar o <b>fator de carga</b> é determinante para a performance, especialmente em endereçamento aberto. A escolha ótima depende do perfil de uso, da política de rehash e do tamanho esperado da tabela.</p>
-      <a class="btn" href="https://github.com/Gabriel-Freitas-S/analise_hash" target="_blank">Ver Repositório Completo</a>
-    </section>
-
-    <div class="footer">
-      <p><b>Autores:</b> <a href="https://github.com/Gabriel-Freitas-S" target="_blank">Gabriel Freitas Souza</a> e <a href="https://github.com/RoberliSchuina" target="_blank">Roberli Schuina Silva</a></p>
-      <p><b>Disciplina:</b> Pesquisa e Ordenação • <b>Linguagem:</b> C++17 • <b>Ano:</b> 2025</p>
-    </div>
   </main>
 
   <script>
-  // CSV inline com fallback para GitHub Pages
+  // Utilidades de download
+  function baixarPNG(canvasId) {
+    const canvas = document.getElementById(canvasId);
+    const url = canvas.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = url; a.download = canvasId + '.png'; a.click();
+  }
+  function baixarPDF(canvasId) {
+    const canvas = document.getElementById(canvasId);
+    // PDF simples via imagem (compatível com Pages sem libs externas)
+    const img = canvas.toDataURL('image/png');
+    const w = window.open('', '_blank');
+    w.document.write('<html><head><title>'+canvasId+'</title></head><body style="margin:0">');
+    w.document.write('<img src="'+img+'" style="width:100%" />');
+    w.document.write('</body></html>');
+    w.document.close();
+    w.focus();
+    // Usuário pode usar imprimir como PDF
+  }
+  function baixarCSV(nome, linhas) {
+    const csv = linhas.map(arr => arr.map(v => (typeof v==='string' && v.includes(','))?`"${v}"`:v).join(',')).join('\n');
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = nome + '.csv'; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  document.addEventListener('click', (e)=>{
+    const btn = e.target.closest('[data-download]');
+    if (btn) { baixarPNG(btn.getAttribute('data-download')); }
+    const btnPdf = e.target.closest('[data-download-pdf]');
+    if (btnPdf) { baixarPDF(btnPdf.getAttribute('data-download-pdf')); }
+  });
+
+  // CSV inline (fallback)
   const CSV_INLINE = `TipoTabela,TamanhoTabela,QuantidadeDados,FuncaoHash,TempoInsercao(ms),TempoBusca(ms),Colisoes,FatorCarga
 Encadeada,29,100,Divisao,0.010,0.018,71,3.4483
 Encadeada,29,100,Multiplicacao,0.009,0.028,71,3.4483
@@ -402,147 +247,152 @@ Aberta,50009,25005,Multiplicacao,0.355,0.024,6251,0.5000`;
       if (!text || text.indexOf('TipoTabela') !== 0) throw new Error('conteúdo inesperado');
       return parseCSV(text);
     } catch (e) {
-      console.warn('Usando dados inline:', e.message);
       return parseCSV(CSV_INLINE);
     }
   }
 
   function parseCSV(text){
     const linhas = text.trim().split(/\r?\n/);
-    linhas.shift(); // Remove header
+    const cab = linhas.shift().split(',');
     return linhas.map(l => {
       const c = l.split(',');
-      return {
-        TipoTabela: c[0], TamanhoTabela: +c[1], QuantidadeDados: +c[2], FuncaoHash: c[3],
-        TempoInsercao: +c[4], TempoBusca: +c[5], Colisoes: +c[6], FatorCarga: +c[7]
-      };
+      return {TipoTabela:c[0], TamanhoTabela:+c[1], QuantidadeDados:+c[2], FuncaoHash:c[3], TempoInsercao:+c[4], TempoBusca:+c[5], Colisoes:+c[6], FatorCarga:+c[7]};
     });
   }
 
-  function criarGraficoLinha(canvas, titulo, labelX, labelY, datasets){
-    const ctx = canvas.getContext('2d');
-    new Chart(ctx, {
-      type: 'line',
-      data: { datasets },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          title: { display: true, text: titulo, color: '#eaf0ff', font: {size: 16} },
-          legend: { labels: {color: '#dbeafe'} },
-          tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(3)} ms` } }
-        },
-        scales: {
-          x: { title: {display: true, text: labelX, color: '#cfe3ff'}, ticks: {color: '#cfe3ff'} },
-          y: { title: {display: true, text: labelY, color: '#cfe3ff'}, ticks: {color: '#cfe3ff'} }
-        }
-      }
+  // Monta CSVs derivados para download
+  function csvInsercao(dados, gruposQD){
+    const header = ['QuantidadeDados','Encadeada(ms)','Aberta(ms)'];
+    const rows = gruposQD.map(q=>{
+      const enc = avg(dados.filter(d=>d.QuantidadeDados===q && d.TipoTabela==='Encadeada'), 'TempoInsercao');
+      const ab  = avg(dados.filter(d=>d.QuantidadeDados===q && d.TipoTabela==='Aberta'),     'TempoInsercao');
+      return [q, enc.toFixed(3), ab.toFixed(3)];
     });
+    return [header, ...rows];
+  }
+  function csvBusca(dados, gruposQD){
+    const header = ['QuantidadeDados','Encadeada(ms)','Aberta(ms)'];
+    const rows = gruposQD.map(q=>{
+      const enc = avg(dados.filter(d=>d.QuantidadeDados===q && d.TipoTabela==='Encadeada'), 'TempoBusca');
+      const ab  = avg(dados.filter(d=>d.QuantidadeDados===q && d.TipoTabela==='Aberta'),     'TempoBusca');
+      return [q, enc.toFixed(3), ab.toFixed(3)];
+    });
+    return [header, ...rows];
+  }
+  function csvFuncoesEnc(dados, tamanhos){
+    const alvo = 10000; const enc10k = dados.filter(d=>d.TipoTabela==='Encadeada' && d.QuantidadeDados===alvo);
+    const header = ['TamanhoTabela','Divisao(ms)','Multiplicacao(ms)'];
+    const rows = tamanhos.map(t=>{
+      const dv = enc10k.find(d=>d.TamanhoTabela===t && d.FuncaoHash==='Divisao')?.TempoInsercao ?? 0;
+      const mp = enc10k.find(d=>d.TamanhoTabela===t && d.FuncaoHash==='Multiplicacao')?.TempoInsercao ?? 0;
+      return [t, dv.toFixed(3), mp.toFixed(3)];
+    });
+    return [header, ...rows];
+  }
+  function csvFuncoesAb(dados){
+    const ab = dados.filter(d=>d.TipoTabela==='Aberta');
+    const header = ['QuantidadeDados','Divisao(ms)','Multiplicacao(ms)','FatorCarga'];
+    const rows = ab.map(d=>[d.QuantidadeDados, d.TempoInsercao.toFixed(3), d.TempoBusca.toFixed(3), d.FatorCarga.toFixed(4)]);
+    return [header, ...rows];
+  }
+  function csvCargaColisao(dados){
+    const enc = dados.filter(d=>d.TipoTabela==='Encadeada');
+    const header = ['FatorCarga','Colisoes'];
+    const rows = enc.map(d=>[d.FatorCarga.toFixed(4), d.Colisoes]);
+    return [header, ...rows];
+  }
+  function csvAbertaCluster(dados){
+    const ab = dados.filter(d=>d.TipoTabela==='Aberta');
+    const header = ['FatorCarga','SondagensEstimadas'];
+    const rows = [...new Map(ab.map(d=>[d.FatorCarga, d])).values()]
+      .sort((a,b)=>a.FatorCarga-b.FatorCarga)
+      .map(d=>[d.FatorCarga.toFixed(4), (1/(1-d.FatorCarga)).toFixed(3)]);
+    return [header, ...rows];
+  }
+  function avg(arr, key){
+    if (!arr.length) return 0; return arr.reduce((s,x)=>s+x[key],0)/arr.length;
   }
 
-  function criarGraficoBarras(canvas, titulo, labelX, labelY, labels, datasets){
-    const ctx = canvas.getContext('2d');
-    new Chart(ctx, {
-      type: 'bar',
-      data: { labels, datasets },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          title: { display: true, text: titulo, color: '#eaf0ff', font: {size: 16} },
-          legend: { labels: {color: '#dbeafe'} },
-          tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(3)} ms` } }
-        },
-        scales: {
-          x: { title: {display: true, text: labelX, color: '#cfe3ff'}, ticks: {color: '#cfe3ff'} },
-          y: { title: {display: true, text: labelY, color: '#cfe3ff'}, ticks: {color: '#cfe3ff'} }
-        }
-      }
-    });
-  }
+  document.addEventListener('click', (e)=>{
+    const csvg = e.target.closest('[data-download-csv]');
+    if (!csvg) return;
+    const tipo = csvg.getAttribute('data-download-csv');
+    if (!window.__dadosCsv) return;
+    const {dados, gruposQD, tamanhos} = window.__dadosCsv;
+    switch(tipo){
+      case 'insercao': return baixarCSV('grafico_insercao', csvInsercao(dados, gruposQD));
+      case 'busca': return baixarCSV('grafico_busca', csvBusca(dados, gruposQD));
+      case 'funcoes_enc': return baixarCSV('grafico_funcoes_enc', csvFuncoesEnc(dados, tamanhos));
+      case 'funcoes_ab': return baixarCSV('grafico_funcoes_ab', csvFuncoesAb(dados));
+      case 'carga_colisao': return baixarCSV('grafico_carga_colisoes', csvCargaColisao(dados));
+      case 'aberta_cluster': return baixarCSV('grafico_aberta_cluster', csvAbertaCluster(dados));
+    }
+  });
 
-  function criarGraficoDispersao(canvas, titulo, labelX, labelY, data){
-    const ctx = canvas.getContext('2d');
-    new Chart(ctx, {
-      type: 'scatter',
-      data: { datasets: [{ label: 'Tabelas Encadeadas', data, backgroundColor: '#f59e0b' }] },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          title: { display: true, text: titulo, color: '#eaf0ff', font: {size: 16} },
-          legend: { labels: {color: '#dbeafe'} },
-          tooltip: { callbacks: { label: (ctx) => `Fator: ${ctx.parsed.x}, Colisões: ${ctx.parsed.y}` } }
-        },
-        scales: {
-          x: { title: {display: true, text: labelX, color: '#cfe3ff'}, ticks: {color: '#cfe3ff'} },
-          y: { title: {display: true, text: labelY, color: '#cfe3ff'}, ticks: {color: '#cfe3ff'} }
-        }
-      }
-    });
-  }
-
+  // Renderização dos gráficos
   (async ()=>{
     const dados = await carregarCSV();
-
-    // Gráfico 1: Tempo de Inserção (Encadeada vs Aberta)
     const gruposQD = [...new Set(dados.map(d=>d.QuantidadeDados))].sort((a,b)=>a-b);
-    const mediaPor = (tipo, campo) => gruposQD.map(q => {
-      const subset = dados.filter(d => d.QuantidadeDados === q && d.TipoTabela === tipo);
-      const soma = subset.reduce((s,x) => s + x[campo], 0);
-      return subset.length ? soma / subset.length : 0;
+    const tamanhos = [29,97,251,499,911];
+    window.__dadosCsv = {dados, gruposQD, tamanhos};
+
+    const media = (tipo, campo) => gruposQD.map(q=>{
+      const subset = dados.filter(d=>d.QuantidadeDados===q && d.TipoTabela===tipo);
+      return subset.length ? subset.reduce((s,x)=>s+x[campo],0)/subset.length : 0;
     });
 
-    criarGraficoLinha(
-      document.getElementById('g_insercao'),
-      'Comparação de Tempo de Inserção', 'Quantidade de Dados', 'Tempo de Inserção (ms)',
-      [
-        { label: 'Tabela Encadeada', data: gruposQD.map((x,i)=>({x,y: mediaPor('Encadeada','TempoInsercao')[i]})), borderColor:'#60a5fa', backgroundColor:'#60a5fa33', tension:.2 },
-        { label: 'Tabela Aberta',    data: gruposQD.map((x,i)=>({x,y: mediaPor('Aberta','TempoInsercao')[i]})),    borderColor:'#34d399', backgroundColor:'#34d39933', tension:.2 }
-      ]
-    );
+    // Inserção
+    new Chart(document.getElementById('g_insercao').getContext('2d'), {
+      type:'line', data:{ datasets:[
+        {label:'Tabela Encadeada', data:gruposQD.map((x,i)=>({x, y: media('Encadeada','TempoInsercao')[i]})), borderColor:'#60a5fa', backgroundColor:'#60a5fa33', tension:.2},
+        {label:'Tabela Aberta',    data:gruposQD.map((x,i)=>({x, y: media('Aberta','TempoInsercao')[i]})),    borderColor:'#34d399', backgroundColor:'#34d39933', tension:.2}
+      ]}, options:{responsive:true, maintainAspectRatio:false, plugins:{title:{display:true,text:'Comparação de Tempo de Inserção'}, legend:{labels:{color:'#dbeafe'}}}, scales:{x:{title:{display:true,text:'Quantidade de Dados'}}, y:{title:{display:true,text:'Tempo de Inserção (ms)'}}}}
+    });
 
-    // Gráfico 2: Tempo de Busca (Encadeada vs Aberta)
-    criarGraficoLinha(
-      document.getElementById('g_busca'),
-      'Comparação de Tempo de Busca', 'Quantidade de Dados', 'Tempo de Busca (ms)',
-      [
-        { label: 'Tabela Encadeada', data: gruposQD.map((x,i)=>({x,y: mediaPor('Encadeada','TempoBusca')[i]})), borderColor:'#06b6d4', backgroundColor:'#06b6d433', tension:.2 },
-        { label: 'Tabela Aberta',    data: gruposQD.map((x,i)=>({x,y: mediaPor('Aberta','TempoBusca')[i]})),    borderColor:'#a78bfa', backgroundColor:'#a78bfa33', tension:.2 }
-      ]
-    );
+    // Busca
+    new Chart(document.getElementById('g_busca').getContext('2d'), {
+      type:'line', data:{ datasets:[
+        {label:'Tabela Encadeada', data:gruposQD.map((x,i)=>({x, y: media('Encadeada','TempoBusca')[i]})), borderColor:'#06b6d4', backgroundColor:'#06b6d433', tension:.2},
+        {label:'Tabela Aberta',    data:gruposQD.map((x,i)=>({x, y: media('Aberta','TempoBusca')[i]})),    borderColor:'#a78bfa', backgroundColor:'#a78bfa33', tension:.2}
+      ]}, options:{responsive:true, maintainAspectRatio:false, plugins:{title:{display:true,text:'Comparação de Tempo de Busca'}, legend:{labels:{color:'#dbeafe'}}}, scales:{x:{title:{display:true,text:'Quantidade de Dados'}}, y:{title:{display:true,text:'Tempo de Busca (ms)'}}}}
+    });
 
-    // Gráfico 3: Funções Hash em Encadeada (10.000 elementos)
-    const tamanhos = [29,97,251,499,911];
-    const enc10k = dados.filter(d => d.TipoTabela==='Encadeada' && d.QuantidadeDados===10000);
-    const divs = tamanhos.map(t => enc10k.find(d => d.TamanhoTabela===t && d.FuncaoHash==='Divisao')?.TempoInsercao ?? 0);
-    const mult = tamanhos.map(t => enc10k.find(d => d.TamanhoTabela===t && d.FuncaoHash==='Multiplicacao')?.TempoInsercao ?? 0);
-    criarGraficoBarras(
-      document.getElementById('g_funcoes'),
-      'Comparação de Funções Hash (Inserção - 10.000 elementos)', 'Tamanho da Tabela', 'Tempo de Inserção (ms)',
-      tamanhos.map(String),
-      [ { label:'Função Divisão', data:divs, backgroundColor:'#60a5fa' }, { label:'Função Multiplicação', data:mult, backgroundColor:'#34d399' } ]
-    );
+    // Funções Encadeada @10k
+    const enc10k = dados.filter(d=>d.TipoTabela==='Encadeada' && d.QuantidadeDados===10000);
+    const divs = tamanhos.map(t=> enc10k.find(d=>d.TamanhoTabela===t && d.FuncaoHash==='Divisao')?.TempoInsercao ?? 0);
+    const mult = tamanhos.map(t=> enc10k.find(d=>d.TamanhoTabela===t && d.FuncaoHash==='Multiplicacao')?.TempoInsercao ?? 0);
+    new Chart(document.getElementById('g_funcoes_enc').getContext('2d'), {
+      type:'bar', data:{ labels:tamanhos.map(String), datasets:[
+        {label:'Função Divisão', data:divs, backgroundColor:'#60a5fa'},
+        {label:'Função Multiplicação', data:mult, backgroundColor:'#34d399'}
+      ]}, options:{responsive:true, maintainAspectRatio:false, plugins:{title:{display:true,text:'Comparação de Funções Hash (10.000 - Encadeada)'}}, scales:{x:{title:{display:true,text:'Tamanho da Tabela'}}, y:{title:{display:true,text:'Tempo de Inserção (ms)'}}}}
+    });
 
-    // Gráfico 4: Fator de Carga × Colisões (Encadeada)
-    const pontosEnc = dados.filter(d => d.TipoTabela==='Encadeada').map(d => ({x:+d.FatorCarga.toFixed(4), y:d.Colisoes}));
-    criarGraficoDispersao(
-      document.getElementById('g_carga_colisao'),
-      'Relação Fator de Carga × Colisões (Encadeadas)', 'Fator de Carga', 'Número de Colisões', pontosEnc
-    );
+    // Funções Aberta
+    const aberta = dados.filter(d=>d.TipoTabela==='Aberta');
+    const gruposAb = [...new Set(aberta.map(d=>d.QuantidadeDados))].sort((a,b)=>a-b);
+    const divAb = gruposAb.map(q=> aberta.find(d=>d.QuantidadeDados===q && d.FuncaoHash==='Divisao')?.TempoInsercao ?? 0);
+    const mulAb = gruposAb.map(q=> aberta.find(d=>d.QuantidadeDados===q && d.FuncaoHash==='Multiplicacao')?.TempoInsercao ?? 0);
+    new Chart(document.getElementById('g_funcoes_ab').getContext('2d'), {
+      type:'bar', data:{ labels:gruposAb.map(String), datasets:[
+        {label:'Divisão (ms)', data:divAb, backgroundColor:'#60a5fa'},
+        {label:'Multiplicação (ms)', data:mulAb, backgroundColor:'#34d399'}
+      ]}, options:{responsive:true, maintainAspectRatio:false, plugins:{title:{display:true,text:'Funções Hash na Tabela Aberta (por quantidade de dados)'}}, scales:{x:{title:{display:true,text:'Quantidade de Dados'}}, y:{title:{display:true,text:'Tempo de Inserção (ms)'}}}}
+    });
 
-    // Gráfico 5: Sondagens/Clustering — Tabela Aberta (estimativa por fator de carga)
-    const abertas = dados.filter(d => d.TipoTabela==='Aberta');
-    const porCarga = [...new Map(abertas.map(d => [d.FatorCarga, d])).values()].sort((a,b)=>a.FatorCarga-b.FatorCarga);
-    const estSondagem = porCarga.map(d => Math.max(1, +(1/(1-d.FatorCarga)).toFixed(3))); // heurística básica
-    const labelsCarga = porCarga.map(d => +d.FatorCarga.toFixed(3));
+    // Dispersão Encadeada
+    const pontosEnc = dados.filter(d=>d.TipoTabela==='Encadeada').map(d=>({x:+d.FatorCarga.toFixed(4), y:d.Colisoes}));
+    new Chart(document.getElementById('g_carga_colisao').getContext('2d'), {
+      type:'scatter', data:{ datasets:[{label:'Encadeada', data:pontosEnc, backgroundColor:'#f59e0b'}]}, options:{responsive:true, maintainAspectRatio:false, plugins:{title:{display:true,text:'Relação Fator de Carga × Colisões (Encadeadas)'}}, scales:{x:{title:{display:true,text:'Fator de Carga'}}, y:{title:{display:true,text:'Número de Colisões'}}}}
+    });
 
-    criarGraficoBarras(
-      document.getElementById('g_aberta_cluster'),
-      'Tabela Aberta: Heurística de Sondagens vs Fator de Carga', 'Fator de Carga', 'Sondagens Médias (estim.)',
-      labelsCarga,
-      [ { label:'Sondagens (estim.)', data: estSondagem, backgroundColor:'#f59e0b' } ]
-    );
+    // Aberta: Sondagens estimadas por fator de carga
+    const porCarga = [...new Map(aberta.map(d=>[d.FatorCarga, d])).values()].sort((a,b)=>a.FatorCarga-b.FatorCarga);
+    const labelsCarga = porCarga.map(d=>+d.FatorCarga.toFixed(3));
+    const sond = porCarga.map(d=> +(1/(1-d.FatorCarga)).toFixed(3));
+    new Chart(document.getElementById('g_aberta_cluster').getContext('2d'), {
+      type:'bar', data:{ labels:labelsCarga, datasets:[{label:'Sondagens (estim.)', data:sond, backgroundColor:'#f59e0b'}]}, options:{responsive:true, maintainAspectRatio:false, plugins:{title:{display:true,text:'Tabela Aberta: Heurística de Sondagens × Fator de Carga'}}, scales:{x:{title:{display:true,text:'Fator de Carga'}}, y:{title:{display:true,text:'Sondagens Médias (estim.)'}}}}
+    });
   })();
   </script>
 </body>
