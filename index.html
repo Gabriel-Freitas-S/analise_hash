@@ -5,10 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Análise Comparativa de Tabelas Hash</title>
   <meta name="description" content="Implementação e análise comparativa de soluções baseadas em hashing (C++17): listas encadeadas vs endereçamento aberto; funções hash: divisão e multiplicação." />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <style>
-    :root {
-      --bg:#0b1220; --card:#111a2e; --muted:#a9b4c9; --text:#eaf0ff; --acc:#4da3ff; --acc2:#22c55e;
-    }
+    :root { --bg:#0b1220; --card:#111a2e; --muted:#a9b4c9; --text:#eaf0ff; --acc:#4da3ff; --acc2:#22c55e; }
     *{box-sizing:border-box}
     body{margin:0;background:linear-gradient(180deg,#0b1220,#0c1426 40%,#0b1323);color:var(--text);font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
     a{color:var(--acc);text-decoration:none}
@@ -32,12 +31,21 @@
     th{color:#cde0ff;text-align:left}
     tr:hover{background:#0f1a34}
     .footer{border-top:1px solid #1e2a44;margin-top:28px;padding-top:16px;color:#9db0d4}
-    code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
     pre{background:#0d162b;border:1px solid #1d2a49;border-radius:10px;padding:14px;overflow:auto}
+    code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
     .chart{height:340px}
     .tag{display:inline-block;margin:2px 6px 0 0;padding:4px 8px;border:1px solid #28436a;border-radius:999px;color:#bcd5ff;font-size:12px}
+    /* Prism theme tweaks */
+    .token.comment{color:#94a3b8}
+    .token.keyword{color:#93c5fd}
+    .token.string{color:#86efac}
+    .token.function{color:#fca5a5}
+    .token.number{color:#fcd34d}
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-core.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/autoloader/prism-autoloader.min.js" data-autoloader-path="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
   <header>
@@ -92,36 +100,86 @@
 
     <section id="implementacao" class="card">
       <h2>Implementação</h2>
-      <h3>TabelaHashEncadeada</h3>
-      <p>Armazena colisões em listas encadeadas por posição. Evita duplicatas, oferece inserção/busca/remoção e estatísticas de distribuição. Suporta <i>divisão</i> e <i>multiplicação</i> para mapeamento de índices.</p>
-<pre><code>// Cálculo de hash (divisão)
+      <h3>Estrutura do Projeto</h3>
+      <pre><code class="language-bash">analise_hash/
+├── include/
+│   ├── TabelaHashEncadeada.hpp
+│   ├── TabelaHashAberta.hpp
+│   └── GeradorDados.hpp
+├── src/
+│   ├── main.cpp
+│   ├── TabelaHashEncadeada.cpp
+│   ├── TabelaHashAberta.cpp
+│   └── GeradorDados.cpp
+├── data/
+│   ├── numeros_aleatorios_100.txt
+│   ├── numeros_aleatorios_500.txt
+│   ├── numeros_aleatorios_1000.txt
+│   ├── numeros_aleatorios_5000.txt
+│   ├── numeros_aleatorios_10000.txt
+│   └── numeros_aleatorios_50000.txt
+├── resultados_benchmark.csv
+├── CMakeLists.txt
+└── README.md</code></pre>
+
+      <h3>TabelaHashEncadeada.hpp/.cpp</h3>
+      <p>Implementa uma tabela hash com <b>encadeamento</b> para resolução de colisões. Cada posição da tabela é uma lista ligada de nós. Pontos-chave:</p>
+      <ul>
+        <li><b>No</b>: nó da lista com valor e ponteiro único para o próximo.</li>
+        <li><b>TipoHash</b>: enum para escolher <i>DIVISAO</i> ou <i>MULTIPLICACAO</i>.</li>
+        <li><b>Inserir/Buscar/Remover</b>: evitam duplicatas e garantem O(1) médio.</li>
+        <li><b>Estatísticas</b>: comprimento médio das listas, maior lista e colisões estimadas.</li>
+      </ul>
+      <pre><code class="language-cpp">// Hash por divisão (índice no intervalo [0, tamanho))
 size_t calcularHashDivisao(int chave) const {
   return static_cast&lt;size_t&gt;(std::abs(chave)) % tamanho;
 }
-// Cálculo de hash (multiplicação)
+// Hash por multiplicação (fração áurea)
 size_t calcularHashMultiplicacao(int chave) const {
-  double prod = std::abs(chave) * 0.6180339887;
+  double prod = std::abs(chave) * 0.6180339887; // CONSTANTE_MULTIPLICACAO
   double frac = prod - std::floor(prod);
   return static_cast&lt;size_t&gt;(std::floor(frac * tamanho));
 }</code></pre>
 
-      <h3>TabelaHashAberta</h3>
-      <p>Usa <b>sondagem linear</b> para endereçamento aberto com lazy deletion e controle de fator de carga, disparando rehash quando necessário. Suporta as duas funções hash e mede estatísticas de sondagem e clustering.</p>
-<pre><code>// Sondagem linear simplificada
-size_t sondagemLinear(size_t idx, int valor, bool paraInsercao) const {
-  size_t tent = 0; size_t i = idx;
-  while (tent &lt; tamanho) {
-    const auto &cel = tabela[i];
-    if (paraInsercao ? cel.disponivelParaInsercao() : cel.estado == OCUPADO && cel.valor == valor)
-      return i;
-    if (!paraInsercao && cel.estado == VAZIO) return tamanho; // não encontrado
-    i = (i + 1) % tamanho; ++tent;
+      <h3>TabelaHashAberta.hpp/.cpp</h3>
+      <p>Implementa <b>endereçamento aberto</b> com <b>sondagem linear</b>, além de <i>lazy deletion</i>, controle de <i>fator de carga</i> e análise de <i>clustering</i>. O rehash é recomendado quando a carga ultrapassa limites definidos.</p>
+      <pre><code class="language-cpp">// Sondagem linear: busca posição disponível ou o próprio valor
+size_t sondagemLinear(size_t indiceInicial, int valor, bool paraInsercao) const {
+  size_t tentativas = 0; size_t i = indiceInicial;
+  while (tentativas &lt; tamanho) {
+    const Celula &cel = tabela[i];
+    if (paraInsercao) {
+      if (cel.disponivelParaInsercao()) return i; // VAZIO ou REMOVIDO
+      if (cel.estado == Celula::Estado::OCUPADO &amp;&amp; cel.valor == valor) return i; // duplicata
+    } else {
+      if (cel.estado == Celula::Estado::VAZIO) return tamanho; // não encontrado
+      if (cel.estado == Celula::Estado::OCUPADO &amp;&amp; cel.valor == valor) return i; // encontrado
+    }
+    i = (i + 1) % tamanho; ++tentativas;
   }
-  return tamanho;
+  return tamanho; // não encontrou
 }</code></pre>
 
-      <h3>GeradorDados</h3>
-      <p>Carrega datasets da pasta <code>data/</code>, gera números aleatórios (com/sem repetição), valida arquivos e calcula estatísticas básicas, além de produzir o CSV consolidado de resultados.</p>
+      <h3>GeradorDados.hpp/.cpp</h3>
+      <p>Responsável por <b>carregar</b> datasets de <code>data/</code>, <b>gerar</b> números (com/sem repetição), <b>validar</b> arquivos, calcular <b>estatísticas</b> e salvar relatórios. Também gera os insumos para benchmarks.</p>
+      <pre><code class="language-cpp">// Carrega números de um arquivo com cabeçalho de quantidade
+std::vector&lt;int&gt; carregarDeArquivo(const std::string &nomeArquivo);
+// Gera N números aleatórios únicos
+std::vector&lt;int&gt; gerarNumerosAleatorios(size_t quantidade);
+// Gera N números aleatórios com possíveis repetições
+std::vector&lt;int&gt; gerarNumerosAleatoriosComRepeticao(size_t quantidade);</code></pre>
+
+      <h3>main.cpp</h3>
+      <p>Orquestra os experimentos: carrega datasets, executa inserções/buscas nas tabelas, mede tempos, estima colisões e salva o <code>resultados_benchmark.csv</code>. Também imprime um relatório no console.</p>
+      <pre><code class="language-cpp">struct ResultadoTeste { /* ... métricas ... */ };
+class BenchmarkManager {
+  template&lt;typename Func&gt;
+  double medirTempo(Func &amp;&amp;f) { /* high_resolution_clock */ }
+  void testarTabelaEncadeada(...);
+  void testarTabelaAberta(...);
+  void salvarResultados(const std::string &arquivo);
+};
+int main() { /* carrega dados, roda testes e salva CSV */ }</code></pre>
     </section>
 
     <section id="resultados" class="card">
@@ -164,118 +222,170 @@ size_t sondagemLinear(size_t idx, int valor, bool paraInsercao) const {
   </main>
 
   <script>
-  // Utilitários PT-BR para tooltips/labels
-  const LABELS = {
-    insercao: { titulo: 'Comparação de Tempo de Inserção', x: 'Quantidade de Dados', y: 'Tempo de Inserção (ms)' },
-    busca:    { titulo: 'Comparação de Tempo de Busca', x: 'Quantidade de Dados', y: 'Tempo de Busca (ms)' },
-    funcoes:  { titulo: 'Comparação de Funções Hash (Inserção)', x: 'Tamanho da Tabela', y: 'Tempo de Inserção (ms)' },
-    relacao:  { titulo: 'Relação Fator de Carga × Colisões', x: 'Fator de Carga', y: 'Número de Colisões' }
-  };
+  // Fallback: inclui CSV inline para GitHub Pages quando o fetch falhar (ex: navegador bloqueia path relativo)
+  const CSV_INLINE = `TipoTabela,TamanhoTabela,QuantidadeDados,FuncaoHash,TempoInsercao(ms),TempoBusca(ms),Colisoes,FatorCarga
+Encadeada,29,100,Divisao,0.010,0.018,71,3.4483
+Encadeada,29,100,Multiplicacao,0.009,0.028,71,3.4483
+Encadeada,97,100,Divisao,0.008,0.014,37,1.0309
+Encadeada,97,100,Multiplicacao,0.008,0.023,37,1.0309
+Encadeada,251,100,Divisao,0.006,0.014,0,0.3984
+Encadeada,251,100,Multiplicacao,0.005,0.013,0,0.3984
+Encadeada,499,100,Divisao,0.009,0.007,0,0.2004
+Encadeada,499,100,Multiplicacao,0.006,0.012,0,0.2004
+Encadeada,911,100,Divisao,0.007,0.005,0,0.1098
+Encadeada,911,100,Multiplicacao,0.006,0.010,0,0.1098
+Aberta,50009,100,Divisao,0.012,0.005,0,0.0020
+Aberta,50009,100,Multiplicacao,0.001,0.007,0,0.0020
+Encadeada,29,500,Divisao,0.044,0.035,470,17.2069
+Encadeada,29,500,Multiplicacao,0.051,0.048,470,17.2069
+Encadeada,97,500,Divisao,0.060,0.031,402,5.1443
+Encadeada,97,500,Multiplicacao,0.060,0.047,402,5.1443
+Encadeada,251,500,Divisao,0.027,0.013,282,1.9880
+Encadeada,251,500,Multiplicacao,0.041,0.023,282,1.9880
+Encadeada,499,500,Divisao,0.026,0.011,0,1.0000
+Encadeada,499,500,Multiplicacao,0.026,0.019,0,1.0000
+Encadeada,911,500,Divisao,0.029,0.010,0,0.5477
+Encadeada,911,500,Multiplicacao,0.030,0.016,0,0.5477
+Aberta,50009,499,Divisao,0.004,0.004,2,0.0100
+Aberta,50009,499,Multiplicacao,0.007,0.009,2,0.0100
+Encadeada,29,1000,Divisao,0.099,0.054,971,34.4828
+Encadeada,29,1000,Multiplicacao,0.077,0.070,971,34.4828
+Encadeada,97,1000,Divisao,0.070,0.030,903,10.3093
+Encadeada,97,1000,Multiplicacao,0.101,0.045,903,10.3093
+Encadeada,251,1000,Divisao,0.063,0.017,753,3.9841
+Encadeada,251,1000,Multiplicacao,0.067,0.025,753,3.9841
+Encadeada,499,1000,Divisao,0.065,0.016,568,2.0040
+Encadeada,499,1000,Multiplicacao,0.080,0.034,568,2.0040
+Encadeada,911,1000,Divisao,0.039,0.011,392,1.0977
+Encadeada,911,1000,Multiplicacao,0.046,0.021,392,1.0977
+Aberta,50009,1000,Divisao,0.004,0.002,9,0.0200
+Aberta,50009,1000,Multiplicacao,0.015,0.005,9,0.0200
+Encadeada,29,5000,Divisao,1.996,0.782,4958,171.9655
+Encadeada,29,5000,Multiplicacao,1.802,0.709,4958,171.9655
+Encadeada,97,5000,Divisao,0.757,0.252,4890,51.4124
+Encadeada,97,5000,Multiplicacao,0.780,0.228,4890,51.4124
+Encadeada,251,5000,Divisao,0.446,0.076,4736,19.8685
+Encadeada,251,5000,Multiplicacao,0.501,0.084,4736,19.8685
+Encadeada,499,5000,Divisao,0.360,0.039,4488,9.9940
+Encadeada,499,5000,Multiplicacao,0.422,0.050,4488,9.9940
+Encadeada,911,5000,Divisao,0.311,0.027,4079,5.4742
+Encadeada,911,5000,Multiplicacao,0.351,0.042,4079,5.4742
+Aberta,50009,4987,Divisao,0.050,0.005,248,0.0997
+Aberta,50009,4987,Multiplicacao,0.164,0.013,248,0.0997
+Encadeada,29,10000,Divisao,10.647,1.779,9922,343.1379
+Encadeada,29,10000,Multiplicacao,9.404,1.932,9922,343.1379
+Encadeada,97,10000,Divisao,3.794,1.424,9854,102.5876
+Encadeada,97,10000,Multiplicacao,3.483,0.541,9854,102.5876
+Encadeada,251,10000,Divisao,1.358,0.195,9700,39.6454
+Encadeada,251,10000,Multiplicacao,1.445,0.205,9700,39.6454
+Encadeada,499,10000,Divisao,0.896,0.080,9452,19.9419
+Encadeada,499,10000,Multiplicacao,0.931,0.078,9452,19.9419
+Encadeada,911,10000,Divisao,0.647,0.038,9040,10.9232
+Encadeada,911,10000,Multiplicacao,0.978,0.048,9040,10.9232
+Aberta,50009,9951,Divisao,0.054,0.006,990,0.1990
+Aberta,50009,9951,Multiplicacao,0.087,0.009,990,0.1990
+Encadeada,29,50000,Divisao,249.355,10.696,48723,1681.1034
+Encadeada,29,50000,Multiplicacao,216.560,10.778,48723,1681.1034
+Encadeada,97,50000,Divisao,73.418,3.616,48655,502.5979
+Encadeada,97,50000,Multiplicacao,75.745,3.505,48655,502.5979
+Encadeada,251,50000,Divisao,33.389,2.266,48501,194.2311
+Encadeada,251,50000,Multiplicacao,37.609,1.819,48501,194.2311
+Encadeada,499,50000,Divisao,19.196,0.810,48253,97.6994
+Encadeada,499,50000,Multiplicacao,20.494,0.681,48253,97.6994
+Encadeada,911,50000,Divisao,11.557,0.389,47841,53.5148
+Encadeada,911,50000,Multiplicacao,11.549,0.468,47841,53.5148
+Aberta,50009,25005,Divisao,0.324,0.016,6251,0.5000
+Aberta,50009,25005,Multiplicacao,0.355,0.024,6251,0.5000`;
 
   async function carregarCSV(){
-    // Tenta obter o CSV via fetch do caminho raiz (quando hospedado no próprio repositório)
-    const resp = await fetch('resultados_benchmark.csv');
-    const text = await resp.text();
-    const linhas = text.trim().split(/\r?\n/);
-    const cab = linhas.shift().split(',');
+    try {
+      const resp = await fetch('resultados_benchmark.csv', {cache:'no-store'});
+      if (!resp.ok) throw new Error('fetch falhou');
+      const text = await resp.text();
+      if (!text || text.indexOf('TipoTabela') !== 0) throw new Error('conteúdo inesperado');
+      return parseCSV(text);
+    } catch (e) {
+      // fallback para inline CSV em páginas estáticas
+      return parseCSV(CSV_INLINE);
+    }
+  }
+  function parseCSV(text){
+    const linhas = text.trim().split(/\r?\n/); linhas.shift();
     return linhas.map(l => {
       const c = l.split(',');
-      return {
-        TipoTabela: c[0], TamanhoTabela:+c[1], QuantidadeDados:+c[2], FuncaoHash:c[3],
-        TempoInsercao:+c[4], TempoBusca:+c[5], Colisoes:+c[6], FatorCarga:+c[7]
-      }
+      return { TipoTabela:c[0], TamanhoTabela:+c[1], QuantidadeDados:+c[2], FuncaoHash:c[3],
+               TempoInsercao:+c[4], TempoBusca:+c[5], Colisoes:+c[6], FatorCarga:+c[7] };
     });
   }
 
   function criarGraficoLinha(ctx, titulo, labelX, labelY, series){
-    new Chart(ctx, {
-      type: 'line',
-      data: { labels: series[0].x, datasets: series.map(s => ({
-        label: s.nome, data: s.y, borderColor: s.cor, backgroundColor: s.cor+'33', tension:.2, fill:false
-      }))},
+    new Chart(ctx, { type: 'line', data: { labels: series[0].x, datasets: series.map(s => ({
+        label: s.nome, data: s.y, borderColor: s.cor, backgroundColor: s.cor+'33', tension:.2, fill:false }))},
       options: { responsive:true, maintainAspectRatio:false,
         plugins:{ legend:{labels:{color:'#dbeafe'}}, title:{display:true,text:titulo,color:'#eaf0ff'}, tooltip:{callbacks:{label:(ctx)=>`${ctx.dataset.label}: ${ctx.parsed.y} ms`}} },
-        scales:{ x:{ title:{display:true,text:labelX,color:'#cfe3ff'}, ticks:{color:'#cfe3ff'} }, y:{ title:{display:true,text:labelY,color:'#cfe3ff'}, ticks:{color:'#cfe3ff'} } }
-      }
-    });
+        scales:{ x:{ title:{display:true,text:labelX,color:'#cfe3ff'}, ticks:{color:'#cfe3ff'} }, y:{ title:{display:true,text:labelY,color:'#cfe3ff'}, ticks:{color:'#cfe3ff'} } } } });
   }
-
   function criarGraficoBarras(ctx, titulo, labelX, labelY, categorias, valores1, valores2, nome1, nome2){
-    new Chart(ctx, {
-      type:'bar',
-      data:{ labels: categorias, datasets:[
+    new Chart(ctx, { type:'bar', data:{ labels: categorias, datasets:[
         {label:nome1, data: valores1, backgroundColor:'#60a5fa'},
-        {label:nome2, data: valores2, backgroundColor:'#34d399'}
-      ]},
+        {label:nome2, data: valores2, backgroundColor:'#34d399'} ]},
       options:{ responsive:true, maintainAspectRatio:false,
         plugins:{ legend:{labels:{color:'#dbeafe'}}, title:{display:true,text:titulo,color:'#eaf0ff'}, tooltip:{callbacks:{label:(ctx)=>`${ctx.dataset.label}: ${ctx.parsed.y} ms`}}},
-        scales:{ x:{ title:{display:true,text:labelX,color:'#cfe3ff'}, ticks:{color:'#cfe3ff'} }, y:{ title:{display:true,text:labelY,color:'#cfe3ff'}, ticks:{color:'#cfe3ff'} } }
-      }
-    });
+        scales:{ x:{ title:{display:true,text:labelX,color:'#cfe3ff'}, ticks:{color:'#cfe3ff'} }, y:{ title:{display:true,text:labelY,color:'#cfe3ff'}, ticks:{color:'#cfe3ff'} } } } });
   }
-
   function criarGraficoDispersao(ctx, titulo, labelX, labelY, pontos){
-    new Chart(ctx, {
-      type:'scatter',
-      data:{ datasets:[{ label:'Encadeada', data: pontos, backgroundColor:'#f59e0b' }]},
+    new Chart(ctx, { type:'scatter', data:{ datasets:[{ label:'Encadeada', data: pontos, backgroundColor:'#f59e0b' }]},
       options:{ responsive:true, maintainAspectRatio:false,
         plugins:{ legend:{labels:{color:'#dbeafe'}}, title:{display:true,text:titulo,color:'#eaf0ff'}, tooltip:{callbacks:{label:(ctx)=>`Fator de Carga: ${ctx.parsed.x}, Colisões: ${ctx.parsed.y}`}}},
-        scales:{ x:{ title:{display:true,text:labelX,color:'#cfe3ff'}, ticks:{color:'#cfe3ff'} }, y:{ title:{display:true,text:labelY,color:'#cfe3ff'}, ticks:{color:'#cfe3ff'} } }
-      }
-    });
+        scales:{ x:{ title:{display:true,text:labelX,color:'#cfe3ff'}, ticks:{color:'#cfe3ff'} }, y:{ title:{display:true,text:labelY,color:'#cfe3ff'}, ticks:{color:'#cfe3ff'} } } } });
   }
 
   (async ()=>{
     const dados = await carregarCSV();
 
-    // Inserção (linhas) — encadeada vs aberta agregado por QuantidadeDados (média)
+    // Inserção — linhas agregadas por QuantidadeDados
     const gruposQD = [...new Set(dados.map(d=>d.QuantidadeDados))].sort((a,b)=>a-b);
-    function serie(tipo){
-      return gruposQD.map(q => {
-        const subset = dados.filter(d=>d.QuantidadeDados===q && d.TipoTabela===tipo);
-        const media = subset.length ? (subset.reduce((s,x)=>s+x.TempoInsercao,0)/subset.length) : 0;
-        return +media.toFixed(3);
-      });
-    }
+    const serieIns = tipo => gruposQD.map(q => {
+      const subset = dados.filter(d=>d.QuantidadeDados===q && d.TipoTabela===tipo);
+      const media = subset.length ? subset.reduce((s,x)=>s+x.TempoInsercao,0)/subset.length : 0;
+      return +media.toFixed(3);
+    });
     criarGraficoLinha(
       document.getElementById('g_insercao'),
-      LABELS.insercao.titulo, LABELS.insercao.x, LABELS.insercao.y,
-      [ {nome:'Tabela Encadeada', x:gruposQD, y:serie('Encadeada'), cor:'#60a5fa'},
-        {nome:'Tabela Aberta',    x:gruposQD, y:serie('Aberta'),    cor:'#34d399'} ]
+      'Comparação de Tempo de Inserção','Quantidade de Dados','Tempo de Inserção (ms)',
+      [ {nome:'Tabela Encadeada', x:gruposQD, y:serieIns('Encadeada'), cor:'#60a5fa'},
+        {nome:'Tabela Aberta',    x:gruposQD, y:serieIns('Aberta'),    cor:'#34d399'} ]
     );
 
-    // Busca (linhas) — encadeada vs aberta agregado por QuantidadeDados (média)
-    function serieBusca(tipo){
-      return gruposQD.map(q => {
-        const subset = dados.filter(d=>d.QuantidadeDados===q && d.TipoTabela===tipo);
-        const media = subset.length ? (subset.reduce((s,x)=>s+x.TempoBusca,0)/subset.length) : 0;
-        return +media.toFixed(3);
-      });
-    }
+    // Busca — linhas agregadas
+    const serieBus = tipo => gruposQD.map(q => {
+      const subset = dados.filter(d=>d.QuantidadeDados===q && d.TipoTabela===tipo);
+      const media = subset.length ? subset.reduce((s,x)=>s+x.TempoBusca,0)/subset.length : 0;
+      return +media.toFixed(3);
+    });
     criarGraficoLinha(
       document.getElementById('g_busca'),
-      LABELS.busca.titulo, LABELS.busca.x, LABELS.busca.y,
-      [ {nome:'Tabela Encadeada', x:gruposQD, y:serieBusca('Encadeada'), cor:'#06b6d4'},
-        {nome:'Tabela Aberta',    x:gruposQD, y:serieBusca('Aberta'),    cor:'#a78bfa'} ]
+      'Comparação de Tempo de Busca','Quantidade de Dados','Tempo de Busca (ms)',
+      [ {nome:'Tabela Encadeada', x:gruposQD, y:serieBus('Encadeada'), cor:'#06b6d4'},
+        {nome:'Tabela Aberta',    x:gruposQD, y:serieBus('Aberta'),    cor:'#a78bfa'} ]
     );
 
-    // Funções hash (barras) — apenas Encadeada @ 10.000 elementos
-    const alvo = 10000;
-    const tamanhos = [29,97,251,499,911];
+    // Funções hash — barras @ 10.000 elementos (Encadeada)
+    const alvo = 10000; const tamanhos = [29,97,251,499,911];
     const enc10k = dados.filter(d=>d.TipoTabela==='Encadeada' && d.QuantidadeDados===alvo);
     const divs = tamanhos.map(t=> +(enc10k.find(d=>d.TamanhoTabela===t && d.FuncaoHash==='Divisao')?.TempoInsercao ?? 0).toFixed(3));
     const mult = tamanhos.map(t=> +(enc10k.find(d=>d.TamanhoTabela===t && d.FuncaoHash==='Multiplicacao')?.TempoInsercao ?? 0).toFixed(3));
     criarGraficoBarras(
       document.getElementById('g_funcoes'),
-      LABELS.funcoes.titulo, LABELS.funcoes.x, LABELS.funcoes.y,
+      'Comparação de Funções Hash (Inserção)','Tamanho da Tabela','Tempo de Inserção (ms)',
       tamanhos.map(String), divs, mult, 'Função Divisão', 'Função Multiplicação'
     );
 
-    // Dispersão Fator de Carga × Colisões — apenas Encadeada
+    // Dispersão — Fator de Carga × Colisões (Encadeada)
     const pontos = dados.filter(d=>d.TipoTabela==='Encadeada').map(d=>({x:+d.FatorCarga.toFixed(4), y:d.Colisoes}));
     criarGraficoDispersao(
       document.getElementById('g_carga_colisao'),
-      LABELS.relacao.titulo, LABELS.relacao.x, LABELS.relacao.y,
+      'Relação Fator de Carga × Colisões','Fator de Carga','Número de Colisões',
       pontos
     );
   })();
