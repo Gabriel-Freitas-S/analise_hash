@@ -124,81 +124,79 @@
 
         <!-- Análise do Código-Fonte -->
         <section id="codigo" class="mb-12 bg-white p-6 rounded-lg shadow">
-            <h2 class="text-2xl font-semibold mb-4 border-b pb-2">3. Análise do Código-Fonte</h2>
+            <h2 class="text-2xl font-semibold mb-4 border-b pb-2">3. Análise Detalhada do Código-Fonte</h2>
+            <p class="text-gray-700 leading-relaxed mb-6">
+                Esta seção apresenta uma análise técnica detalhada de cada componente do projeto, explicando as decisões de design, algoritmos implementados e complexidades computacionais. Todos os arquivos foram desenvolvidos seguindo boas práticas de programação C++17 e incluem documentação profissional completa.
+            </p>
+            
             <div class="space-y-4">
                 <!-- main.cpp -->
                 <article>
                     <details>
-                        <summary><code>src/main.cpp</code></summary>
+                        <summary><code>src/main.cpp</code> - Programa Principal e Orquestrador de Benchmarks</summary>
                         <div class="details-content">
+                            <h4 class="text-lg font-semibold mb-3 text-gray-800">📋 Visão Geral</h4>
                             <p class="text-gray-700 leading-relaxed mb-4">
-                                Ponto de entrada da aplicação e orquestrador dos benchmarks. Este arquivo define todos os cenários de teste, combinando tipos de tabela (Encadeada, Aberta), tamanhos, quantidades de dados e funções de hash. Para cada cenário, ele instancia a tabela correspondente, carrega os dados usando o <code>CarregadorDados</code>, e mede com precisão (usando <code>std::chrono</code>) o tempo total de inserção e busca. Ao final, coleta as métricas (tempo, colisões, fator de carga) e as escreve no arquivo <code>resultados_benchmark.csv</code>.
+                                O arquivo <code>main.cpp</code> é o coração do sistema de benchmarking, responsável por coordenar todos os testes comparativos entre as diferentes implementações de tabelas hash. Implementa um framework robusto de medição de performance que executa testes sistemáticos e gera relatórios detalhados.
                             </p>
-                            <div class="code-block"><pre><code><span class="preprocessor">#include &lt;iostream&gt;</span>
-<span class="preprocessor">#include &lt;chrono&gt;</span>
-<span class="preprocessor">#include &lt;fstream&gt;</span>
-<span class="preprocessor">#include &lt;iomanip&gt;</span>
-<span class="preprocessor">#include &lt;vector&gt;</span>
-<span class="preprocessor">#include &lt;memory&gt;</span>
-
-<span class="preprocessor">#include "TabelaEncadeada.hpp"</span>
-<span class="preprocessor">#include "TabelaAberta.hpp"</span>
-<span class="preprocessor">#include "CarregadorDados.hpp"</span>
-
+                            
+                            <h4 class="text-lg font-semibold mb-3 text-gray-800">🏗️ Arquitetura Principal</h4>
+                            <ul class="list-disc list-inside space-y-2 text-gray-700 mb-4">
+                                <li><strong>ResultadoTeste:</strong> Estrutura que encapsula todas as métricas de um teste específico (tempos, colisões, fator de carga)</li>
+                                <li><strong>BenchmarkManager:</strong> Classe gerenciadora que coordena execução de testes, coleta de dados e geração de relatórios</li>
+                                <li><strong>Template medirTempo():</strong> Função genérica para medição precisa usando std::chrono::high_resolution_clock</li>
+                                <li><strong>Algoritmos de estimativa:</strong> Funções matemáticas para calcular colisões esperadas baseadas em teoria probabilística</li>
+                            </ul>
+                            
+                            <h4 class="text-lg font-semibold mb-3 text-gray-800">⚙️ Funcionalidades Técnicas</h4>
+                            <div class="bg-gray-50 p-4 rounded-lg mb-4">
+                                <h5 class="font-semibold mb-2">Medição de Performance</h5>
+                                <p class="text-gray-700 text-sm mb-2">Utiliza std::chrono para medições em microssegundos, convertidas para milissegundos para legibilidade. O template permite medição de qualquer função lambda.</p>
+                                
+                                <h5 class="font-semibold mb-2">Estimativa de Colisões</h5>
+                                <p class="text-gray-700 text-sm mb-2"><strong>Encadeamento:</strong> Baseada na distribuição de Poisson: colisões ≈ n - m(1 - e^(-λ)), onde λ = n/m</p>
+                                <p class="text-gray-700 text-sm"><strong>Endereçamento Aberto:</strong> Considera clustering primário: colisões ≈ n × fc / 2</p>
+                            </div>
+                            
+                            <h4 class="text-lg font-semibold mb-3 text-gray-800">🔄 Fluxo de Execução</h4>
+                            <ol class="list-decimal list-inside space-y-2 text-gray-700 mb-4">
+                                <li>Inicialização de componentes (CarregadorDados, BenchmarkManager)</li>
+                                <li>Geração de dataset para operações de busca (1000 números aleatórios)</li>
+                                <li>Loop principal através dos arquivos de dataset (100 a 50.000 elementos)</li>
+                                <li>Para cada dataset: testa todas as configurações de tabela encadeada e aberta</li>
+                                <li>Medição precisa de tempos de inserção e busca</li>
+                                <li>Cálculo de estatísticas (colisões, fator de carga)</li>
+                                <li>Geração de relatórios (console + CSV)</li>
+                            </ol>
+                            
+                            <div class="code-block"><pre><code><span class="comment">// Estrutura para encapsular resultados de teste</span>
 <span class="keyword">struct</span> ResultadoTeste {
-    <span class="type">std::string</span> tipoTabela;
-    <span class="type">size_t</span> tamanhoTabela;
-    <span class="type">size_t</span> quantidadeDados;
-    <span class="type">std::string</span> tipoFuncaoHash;
-    <span class="type">double</span> tempoInsercao;
-    <span class="type">double</span> tempoBusca;
-    <span class="type">size_t</span> colisoes;
-    <span class="type">double</span> fatorCarga;
+    <span class="type">std::string</span> tipoTabela;      <span class="comment">// "Encadeada" ou "Aberta"</span>
+    <span class="type">size_t</span> tamanhoTabela;        <span class="comment">// Tamanho da tabela hash</span>
+    <span class="type">size_t</span> quantidadeDados;      <span class="comment">// Elementos inseridos</span>
+    <span class="type">std::string</span> tipoFuncaoHash;  <span class="comment">// "Divisao" ou "Multiplicacao"</span>
+    <span class="type">double</span> tempoInsercao;        <span class="comment">// Tempo em milissegundos</span>
+    <span class="type">double</span> tempoBusca;           <span class="comment">// Tempo em milissegundos</span>
+    <span class="type">size_t</span> colisoes;             <span class="comment">// Estimativa de colisões</span>
+    <span class="type">double</span> fatorCarga;           <span class="comment">// elementos/tamanho</span>
 };
 
-<span class="keyword">class</span> BenchmarkManager {
-<span class="keyword">private</span>:
-    <span class="type">std::vector&lt;ResultadoTeste&gt;</span> resultados;
-
-    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Func&gt;
-    <span class="type">double</span> medirTempo(Func&amp;&amp; func) {
-        <span class="keyword">auto</span> inicio = <span class="type">std::chrono::high_resolution_clock::now</span>();
-        func();
-        <span class="keyword">auto</span> fim = <span class="type">std::chrono::high_resolution_clock::now</span>();
-        <span class="keyword">auto</span> duracao = <span class="type">std::chrono::duration_cast&lt;std::chrono::microseconds&gt;</span>(fim - inicio);
-        <span class="keyword">return</span> duracao.count() / <span class="number">1000.0</span>;
-    }
-
-<span class="keyword">public</span>:
-    <span class="type">void</span> testarTabelaEncadeada(<span class="keyword">const</span> <span class="type">std::vector&lt;int&gt;</span>&amp; dados,
-                              <span class="keyword">const</span> <span class="type">std::vector&lt;int&gt;</span>&amp; dadosBusca,
-                              <span class="type">size_t</span> tamanhoTabela) {
-        TabelaEncadeada tabela(tamanhoTabela);
-        <span class="type">double</span> tempoInsercao = medirTempo([&amp;]() { 
-            <span class="keyword">for</span> (<span class="type">int</span> v : dados) 
-                tabela.inserir(v, TabelaEncadeada::TipoHash::DIVISAO); 
-        });
-        <span type="comment">// ... resto da implementação</span>
-    }
-
-    <span type="comment">// Métodos similares para tabela aberta e relatórios</span>
-};
-
-<span class="type">int</span> main() {
-    CarregadorDados carregador;
-    BenchmarkManager benchmark;
+<span class="comment">// Template para medição precisa de tempo</span>
+<span class="keyword">template</span>&lt;<span class="keyword">typename</span> Func&gt;
+<span class="type">double</span> medirTempo(Func&amp;&amp; func) {
+    <span class="keyword">auto</span> inicio = <span class="type">std::chrono::high_resolution_clock::now</span>();
+    func();  <span class="comment">// Executa função a ser medida</span>
+    <span class="keyword">auto</span> fim = <span class="type">std::chrono::high_resolution_clock::now</span>();
     
-    <span class="comment">// Execução dos benchmarks para todos os cenários</span>
-    <span class="keyword">for</span> (<span class="keyword">const</span> <span class="type">std::string</span>&amp; arquivo : ARQS) {
-        <span class="keyword">auto</span> dados = carregador.carregarDeArquivo(arquivo);
-        <span class="comment">// Testes para diferentes configurações</span>
-    }
-    
-    benchmark.imprimirRelatorio();
-    benchmark.salvarResultados(<span class="string">"resultados_benchmark.csv"</span>);
-    <span class="keyword">return</span> <span class="number">0</span>;
-}
-</code></pre></div>
+    <span class="comment">// Converte para milissegundos com precisão decimal</span>
+    <span class="keyword">auto</span> duracao = <span class="type">std::chrono::duration_cast&lt;std::chrono::microseconds&gt;</span>(fim - inicio);
+    <span class="keyword">return</span> duracao.count() / <span class="number">1000.0</span>;
+}</code></pre></div>
+                            
+                            <h4 class="text-lg font-semibold mb-3 text-gray-800">📊 Complexidade e Performance</h4>
+                            <p class="text-gray-700 leading-relaxed">
+                                <strong>Complexidade total:</strong> O(k × n × t) onde k = número de datasets, n = tamanho médio dos datasets, t = configurações testadas. O programa é otimizado para minimizar overhead de medição e utiliza tratamento robusto de exceções para continuar execução mesmo com falhas individuais.
+                            </p>
                         </div>
                     </details>
                 </article>
@@ -206,53 +204,71 @@
                 <!-- TabelaEncadeada.hpp -->
                 <article>
                     <details>
-                        <summary><code>include/TabelaEncadeada.hpp</code></summary>
+                        <summary><code>include/TabelaEncadeada.hpp</code> - Interface da Tabela Hash com Encadeamento</summary>
                         <div class="details-content">
+                            <h4 class="text-lg font-semibold mb-3 text-gray-800">📋 Visão Geral</h4>
                             <p class="text-gray-700 leading-relaxed mb-4">
-                                Arquivo de cabeçalho que define a interface da classe <code>TabelaEncadeada</code>. A estrutura principal utiliza um <code>std::vector</code> de ponteiros inteligentes para nós de listas encadeadas, representando o array onde cada posição pode conter uma lista de elementos que colidiram naquele índice. Declara os métodos públicos para interagir com a tabela e os métodos privados para as funções de hash (divisão e multiplicação).
+                                Define a interface completa da implementação de tabela hash com encadeamento (separate chaining). Utiliza listas encadeadas com ponteiros inteligentes para garantir segurança de memória e performance otimizada. Cada posição da tabela pode conter uma lista de elementos que colidiram no mesmo índice.
                             </p>
-                            <div class="code-block"><pre><code><span class="preprocessor">#pragma once</span>
-
-<span class="preprocessor">#include &lt;vector&gt;</span>
-<span class="preprocessor">#include &lt;memory&gt;</span>
-<span class="preprocessor">#include &lt;stdexcept&gt;</span>
-<span class="preprocessor">#include &lt;cmath&gt;</span>
-
+                            
+                            <h4 class="text-lg font-semibold mb-3 text-gray-800">🏗️ Estruturas Principais</h4>
+                            <div class="bg-gray-50 p-4 rounded-lg mb-4">
+                                <h5 class="font-semibold mb-2">Estrutura No</h5>
+                                <p class="text-gray-700 text-sm mb-2">Representa um nó da lista encadeada com std::unique_ptr para gerenciamento automático de memória. Evita vazamentos e simplifica destruição.</p>
+                                
+                                <h5 class="font-semibold mb-2">Classe TabelaEncadeada</h5>
+                                <p class="text-gray-700 text-sm mb-2">Contém std::vector de unique_ptr para as listas, garantindo que cada posição possa ter uma lista independente de tamanho variável.</p>
+                                
+                                <h5 class="font-semibold mb-2">Enum TipoHash</h5>
+                                <p class="text-gray-700 text-sm">Define os dois métodos de hashing: DIVISAO (k mod m) e MULTIPLICACAO (baseado na proporção áurea).</p>
+                            </div>
+                            
+                            <h4 class="text-lg font-semibold mb-3 text-gray-800">⚙️ Métodos Principais</h4>
+                            <ul class="list-disc list-inside space-y-2 text-gray-700 mb-4">
+                                <li><strong>inserir():</strong> Insere no início da lista (O(1)) após verificar duplicatas</li>
+                                <li><strong>buscar():</strong> Percorre lista sequencialmente (O(1) médio, O(n) pior caso)</li>
+                                <li><strong>remover():</strong> Remove elemento e reconecta ponteiros (O(1) médio)</li>
+                                <li><strong>calcularHashDivisao():</strong> h(k) = |k| mod m (simples e eficiente)</li>
+                                <li><strong>calcularHashMultiplicacao():</strong> h(k) = ⌊m × ((k × A) mod 1)⌋ onde A = 0.618...</li>
+                            </ul>
+                            
+                            <div class="code-block"><pre><code><span class="comment">// Nó da lista encadeada com ponteiro inteligente</span>
 <span class="keyword">struct</span> No {
-    <span class="type">int</span> valor;
-    <span class="type">std::unique_ptr&lt;No&gt;</span> proximo;
+    <span class="type">int</span> valor;                      <span class="comment">// Valor armazenado</span>
+    <span class="type">std::unique_ptr&lt;No&gt;</span> proximo;    <span class="comment">// Próximo nó (gerenciamento automático)</span>
     
     <span class="keyword">explicit</span> No(<span class="type">int</span> val) : valor(val), proximo(<span class="keyword">nullptr</span>) {}
 };
 
 <span class="keyword">class</span> TabelaEncadeada {
 <span class="keyword">private</span>:
-    <span class="type">std::vector&lt;std::unique_ptr&lt;No&gt;&gt;</span> tabela;
-    <span class="type">size_t</span> tamanho;
-    <span class="type">size_t</span> numElementos;
+    <span class="type">std::vector&lt;std::unique_ptr&lt;No&gt;&gt;</span> tabela;  <span class="comment">// Array de listas</span>
+    <span class="type">size_t</span> tamanho;                           <span class="comment">// Tamanho da tabela</span>
+    <span class="type">size_t</span> numElementos;                      <span class="comment">// Contador de elementos</span>
     
+    <span class="comment">// Constante da proporção áurea para multiplicação</span>
     <span class="keyword">static</span> <span class="keyword">constexpr</span> <span class="type">double</span> CONSTANTE_MULTIPLICACAO = <span class="number">0.6180339887</span>;
-    
+
 <span class="keyword">public</span>:
-    <span class="keyword">enum</span> <span class="keyword">class</span> TipoHash { 
-        DIVISAO,
-        MULTIPLICACAO
-    };
+    <span class="comment">// Funções de hash disponíveis</span>
+    <span class="keyword">enum</span> <span class="keyword">class</span> TipoHash { DIVISAO, MULTIPLICACAO };
     
-    <span class="keyword">explicit</span> TabelaEncadeada(<span class="type">size_t</span> tam);
-    
+    <span class="comment">// Interface principal</span>
     <span class="type">void</span> inserir(<span class="type">int</span> valor, TipoHash tipo);
     <span class="type">bool</span> buscar(<span class="type">int</span> valor, TipoHash tipo) <span class="keyword">const</span>;
-    <span class="type">bool</span> remover(<span class="type">int</span> valor, TipoHash tipo);
     
-    <span class="type">size_t</span> calcularHashDivisao(<span class="type">int</span> chave) <span class="keyword">const</span>;
-    <span class="type">size_t</span> calcularHashMultiplicacao(<span class="type">int</span> chave) <span class="keyword">const</span>;
-    
+    <span class="comment">// Métrica importantes</span>
     <span class="type">double</span> fatorCarga() <span class="keyword">const</span>;
     <span class="type">size_t</span> getNumElementos() <span class="keyword">const</span>;
-    <span class="type">size_t</span> getTamanho() <span class="keyword">const</span>;
-};
-</code></pre></div>
+};</code></pre></div>
+                            
+                            <h4 class="text-lg font-semibold mb-3 text-gray-800">🎯 Vantagens do Encadeamento</h4>
+                            <ul class="list-disc list-inside space-y-2 text-gray-700">
+                                <li><strong>Sem limite teórico</strong> de elementos</li>
+                                <li><strong>Performance degrada graciosamente</strong> com aumento do fator de carga</li>
+                                <li><strong>Implementação robusta</strong> e conceitualmente simples</li>
+                                <li><strong>Permite remoção eficiente</strong> sem problemas de reorganização</li>
+                            </ul>
                         </div>
                     </details>
                 </article>
@@ -260,62 +276,88 @@
                 <!-- TabelaAberta.hpp -->
                 <article>
                     <details>
-                        <summary><code>include/TabelaAberta.hpp</code></summary>
+                        <summary><code>include/TabelaAberta.hpp</code> - Interface da Tabela Hash com Endereçamento Aberto</summary>
                         <div class="details-content">
+                            <h4 class="text-lg font-semibold mb-3 text-gray-800">📋 Visão Geral</h4>
                             <p class="text-gray-700 leading-relaxed mb-4">
-                                Definição da classe <code>TabelaAberta</code>. Utiliza uma estrutura <code>Celula</code> que pode estar em três estados: VAZIO, OCUPADO ou REMOVIDO. A tabela é um único <code>std::vector&lt;Celula&gt;</code>. Implementa sondagem linear para resolução de colisões e controle automático de fator de carga, permitindo lazy deletion para remoções eficientes.
+                                Define a implementação de tabela hash com endereçamento aberto usando sondagem linear. Todos os elementos são armazenados diretamente no array da tabela, sem estruturas auxiliares. Implementa lazy deletion e controle automático de fator de carga para manter performance.
                             </p>
-                            <div class="code-block"><pre><code><span class="preprocessor">#pragma once</span>
-
-<span class="preprocessor">#include &lt;vector&gt;</span>
-<span class="preprocessor">#include &lt;optional&gt;</span>
-<span class="preprocessor">#include &lt;stdexcept&gt;</span>
-
+                            
+                            <h4 class="text-lg font-semibold mb-3 text-gray-800">🏗️ Estrutura Celula</h4>
+                            <div class="bg-gray-50 p-4 rounded-lg mb-4">
+                                <p class="text-gray-700 text-sm mb-2">Cada célula pode estar em três estados:</p>
+                                <ul class="list-disc list-inside space-y-1 text-gray-700 text-sm">
+                                    <li><strong>VAZIO:</strong> Nunca foi ocupada - para busca e permite inserção</li>
+                                    <li><strong>OCUPADO:</strong> Contém um valor válido</li>
+                                    <li><strong>REMOVIDO:</strong> Foi ocupada mas valor foi removido (lazy deletion)</li>
+                                </ul>
+                            </div>
+                            
+                            <h4 class="text-lg font-semibold mb-3 text-gray-800">⚙️ Sondagem Linear</h4>
+                            <p class="text-gray-700 leading-relaxed mb-4">
+                                O método <code>sondagemLinear()</code> é o coração do endereçamento aberto. Incrementa sequencialmente o índice até encontrar posição adequada. Comporta-se diferentemente para inserção (procura VAZIO/REMOVIDO) e busca (para em VAZIO, continua em REMOVIDO).
+                            </p>
+                            
+                            <h4 class="text-lg font-semibold mb-3 text-gray-800">🎛️ Controle de Fator de Carga</h4>
+                            <ul class="list-disc list-inside space-y-2 text-gray-700 mb-4">
+                                <li><strong>MAX_FATOR_CARGA = 0.7:</strong> Limite para manter performance aceitável</li>
+                                <li><strong>fatorCarga():</strong> Considera apenas elementos ativos (não removidos)</li>
+                                <li><strong>fatorOcupacao():</strong> Inclui elementos removidos para decisão de rehash</li>
+                                <li><strong>precisaRehash():</strong> Verifica se é necessário expandir a tabela</li>
+                            </ul>
+                            
+                            <div class="code-block"><pre><code><span class="comment">// Estados possíveis de uma célula</span>
 <span class="keyword">struct</span> Celula {
-    <span class="keyword">enum</span> <span class="keyword">class</span> Estado { 
-        VAZIO,
-        OCUPADO,
-        REMOVIDO
-    };
+    <span class="keyword">enum</span> <span class="keyword">class</span> Estado { VAZIO, OCUPADO, REMOVIDO };
     
     <span class="type">int</span> valor;
     Estado estado;
     
+    <span class="comment">// Construtor para célula vazia</span>
     Celula() : valor(<span class="number">0</span>), estado(Estado::VAZIO) {}
-    <span class="keyword">explicit</span> Celula(<span class="type">int</span> val) : valor(val), estado(Estado::OCUPADO) {}
     
-    <span class="type">void</span> marcarRemovido();
-    <span class="type">bool</span> disponivelParaInsercao() <span class="keyword">const</span>;
+    <span class="comment">// Verifica se célula está disponível para inserção</span>
+    <span class="type">bool</span> disponivelParaInsercao() <span class="keyword">const</span> {
+        <span class="keyword">return</span> estado == Estado::VAZIO || estado == Estado::REMOVIDO;
+    }
 };
 
 <span class="keyword">class</span> TabelaAberta {
 <span class="keyword">private</span>:
-    <span class="type">std::vector&lt;Celula&gt;</span> tabela;
-    <span class="type">size_t</span> tamanho;
-    <span class="type">size_t</span> numElementos;
-    <span class="type">size_t</span> numRemovidos;
+    <span class="type">std::vector&lt;Celula&gt;</span> tabela;     <span class="comment">// Array único de células</span>
+    <span class="type">size_t</span> numElementos;            <span class="comment">// Elementos ativos</span>
+    <span class="type">size_t</span> numRemovidos;            <span class="comment">// Elementos removidos</span>
     
-    <span class="keyword">static</span> <span class="keyword">constexpr</span> <span class="type">double</span> CONSTANTE_MULTIPLICACAO = <span class="number">0.6180339887</span>;
+    <span class="comment">// Constantes para controle</span>
     <span class="keyword">static</span> <span class="keyword">constexpr</span> <span class="type">double</span> MAX_FATOR_CARGA = <span class="number">0.7</span>;
     
-    <span class="type">size_t</span> sondagemLinear(<span class="type">size_t</span> indiceInicial, <span class="type">int</span> valor, <span class="type">bool</span> paraInsercao = <span class="keyword">false</span>) <span class="keyword">const</span>;
-    
+    <span class="comment">// Sondagem linear - coração do endereçamento aberto</span>
+    <span class="type">size_t</span> sondagemLinear(<span class="type">size_t</span> indiceInicial, <span class="type">int</span> valor, <span class="type">bool</span> paraInsercao) <span class="keyword">const</span>;
+
 <span class="keyword">public</span>:
-    <span class="keyword">enum</span> <span class="keyword">class</span> TipoHash { 
-        DIVISAO,
-        MULTIPLICACAO
-    };
-    
-    <span class="keyword">explicit</span> TabelaAberta(<span class="type">size_t</span> tam);
-    
-    <span class="type">void</span> inserir(<span class="type">int</span> valor, TipoHash tipo);
-    <span class="type">bool</span> buscar(<span class="type">int</span> valor, TipoHash tipo) <span class="keyword">const</span>;
+    <span class="comment">// Lazy deletion - marca como removido sem reorganizar</span>
     <span class="type">std::optional&lt;int&gt;</span> remover(<span class="type">int</span> valor, TipoHash tipo);
     
-    <span class="type">double</span> fatorCarga() <span class="keyword">const</span>;
+    <span class="comment">// Controle de fator de carga</span>
+    <span class="type">double</span> fatorCarga() <span class="keyword">const</span>;      <span class="comment">// Apenas elementos ativos</span>
+    <span class="type">double</span> fatorOcupacao() <span class="keyword">const</span>;    <span class="comment">// Inclui removidos</span>
     <span class="type">bool</span> precisaRehash() <span class="keyword">const</span>;
-};
-</code></pre></div>
+};</code></pre></div>
+                            
+                            <h4 class="text-lg font-semibold mb-3 text-gray-800">🎯 Vantagens do Endereçamento Aberto</h4>
+                            <ul class="list-disc list-inside space-y-2 text-gray-700 mb-4">
+                                <li><strong>Maior eficiência de memória</strong> - sem ponteiros extras</li>
+                                <li><strong>Melhor localidade de cache</strong> - dados contíguos</li>
+                                <li><strong>Performance excelente</strong> com baixo fator de carga</li>
+                                <li><strong>Menos alocações dinâmicas</strong></li>
+                            </ul>
+                            
+                            <h4 class="text-lg font-semibold mb-3 text-gray-800">⚠️ Desafios</h4>
+                            <ul class="list-disc list-inside space-y-2 text-gray-700">
+                                <li><strong>Clustering primário</strong> - elementos tendem a se agrupar</li>
+                                <li><strong>Performance degrada rapidamente</strong> com alto fator de carga</li>
+                                <li><strong>Lazy deletion necessária</strong> para manter integridade da sondagem</li>
+                            </ul>
                         </div>
                     </details>
                 </article>
@@ -323,51 +365,169 @@
                 <!-- CarregadorDados.hpp -->
                 <article>
                     <details>
-                        <summary><code>include/CarregadorDados.hpp</code></summary>
+                        <summary><code>include/CarregadorDados.hpp</code> - Interface do Gerenciador de Datasets</summary>
                         <div class="details-content">
+                            <h4 class="text-lg font-semibold mb-3 text-gray-800">📋 Visão Geral</h4>
                             <p class="text-gray-700 leading-relaxed mb-4">
-                                Classe responsável por gerenciar dados para testes de tabelas hash. Sua função principal é <strong>carregar</strong> dados de arquivos existentes na pasta <code>data/</code>, mas também oferece funcionalidades para gerar dados aleatórios para testes adicionais, validar a integridade dos arquivos de dados e fornecer estatísticas sobre os datasets. O nome reflete melhor sua funcionalidade principal de carregamento.
+                                Classe especializada no gerenciamento de datasets para os testes de tabelas hash. Sua função principal é <strong>carregar</strong> dados de arquivos na pasta <code>data/</code>, mas também oferece funcionalidades complementares como geração de dados aleatórios, validação de arquivos e análise estatística.
                             </p>
-                            <div class="code-block"><pre><code><span class="preprocessor">#pragma once</span>
-
-<span class="preprocessor">#include &lt;vector&gt;</span>
-<span class="preprocessor">#include &lt;string&gt;</span>
-<span class="preprocessor">#include &lt;fstream&gt;</span>
-<span class="preprocessor">#include &lt;stdexcept&gt;</span>
-<span class="preprocessor">#include &lt;random&gt;</span>
-<span class="preprocessor">#include &lt;filesystem&gt;</span>
-
-<span class="keyword">class</span> CarregadorDados {
+                            
+                            <h4 class="text-lg font-semibold mb-3 text-gray-800">🎲 Sistema de Geração Aleatória</h4>
+                            <div class="bg-gray-50 p-4 rounded-lg mb-4">
+                                <p class="text-gray-700 text-sm mb-2">Utiliza std::mt19937 (Mersenne Twister) para geração de alta qualidade:</p>
+                                <ul class="list-disc list-inside space-y-1 text-gray-700 text-sm">
+                                    <li><strong>Seed configurável:</strong> Permite reprodutibilidade ou aleatoriedade</li>
+                                    <li><strong>Distribuição uniforme:</strong> std::uniform_int_distribution garante distribuição uniforme</li>
+                                    <li><strong>Faixa ajustável:</strong> Valores entre 1 e 1.000.000 por padrão</li>
+                                </ul>
+                            </div>
+                            
+                            <h4 class="text-lg font-semibold mb-3 text-gray-800">📁 Carregamento Robusto de Arquivos</h4>
+                            <ul class="list-disc list-inside space-y-2 text-gray-700 mb-4">
+                                <li><strong>Formato flexível:</strong> Suporta arquivos com ou sem header de quantidade</li>
+                                <li><strong>Tratamento de erros:</strong> Continua processamento mesmo com linhas inválidas</li>
+                                <li><strong>Limpeza automática:</strong> Remove espaços em branco e linhas vazias</li>
+                                <li><strong>Validação de integridade:</strong> Verifica consistência dos dados carregados</li>
+                            </ul>
+                            
+                            <h4 class="text-lg font-semibold mb-3 text-gray-800">📊 Análise Estatística</h4>
+                            <p class="text-gray-700 leading-relaxed mb-4">
+                                A estrutura <code>InfoDataset</code> encapsula informações completas sobre um dataset: quantidade de elementos, valores mínimo/máximo, média aritmética, análise de duplicatas. Essencial para caracterizar a qualidade dos dados de teste.
+                            </p>
+                            
+                            <div class="code-block"><pre><code><span class="keyword">class</span> CarregadorDados {
 <span class="keyword">private</span>:
-    <span class="type">std::mt19937</span> gerador;
-    <span class="type">std::uniform_int_distribution&lt;int&gt;</span> distribuicao;
+    <span class="type">std::mt19937</span> gerador;                           <span class="comment">// Mersenne Twister</span>
+    <span class="type">std::uniform_int_distribution&lt;int&gt;</span> distribuicao; <span class="comment">// Distribuição uniforme</span>
     
+    <span class="comment">// Utilitários internos</span>
     <span class="type">bool</span> arquivoExiste(<span class="keyword">const</span> <span class="type">std::string</span>&amp; nomeArquivo) <span class="keyword">const</span>;
     <span class="type">std::string</span> trim(<span class="keyword">const</span> <span class="type">std::string</span>&amp; str) <span class="keyword">const</span>;
 
 <span class="keyword">public</span>:
-    <span class="keyword">explicit</span> CarregadorDados(<span class="type">unsigned</span> <span class="type">int</span> seed = <span class="type">std::random_device</span>{}(), 
-                         <span class="type">int</span> minimo = <span class="number">1</span>, 
-                         <span class="type">int</span> maximo = <span class="number">1000000</span>);
-    
-    <span class="comment">/**
-     * @brief Carrega números de um arquivo de texto
-     * Formato esperado:
-     * - Primeira linha: quantidade de números
-     * - Linhas seguintes: um número por linha
-     */</span>
+    <span class="comment">// Carregamento principal - função core</span>
     <span class="type">std::vector&lt;int&gt;</span> carregarDeArquivo(<span class="keyword">const</span> <span class="type">std::string</span>&amp; nomeArquivo);
     
-    <span class="type">std::vector&lt;int&gt;</span> gerarNumerosAleatorios(<span class="type">size_t</span> quantidade);
-    <span class="type">std::vector&lt;int&gt;</span> gerarNumerosAleatoriosComRepeticao(<span class="type">size_t</span> quantidade);
+    <span class="comment">// Geração de dados para testes</span>
+    <span class="type">std::vector&lt;int&gt;</span> gerarNumerosAleatorios(<span class="type">size_t</span> quantidade);           <span class="comment">// Únicos</span>
+    <span class="type">std::vector&lt;int&gt;</span> gerarNumerosAleatoriosComRepeticao(<span class="type">size_t</span> quantidade); <span class="comment">// Permite duplicatas</span>
     
-    <span class="type">bool</span> salvarEmArquivo(<span class="keyword">const</span> <span class="type">std::vector&lt;int&gt;</span>&amp; numeros, <span class="keyword">const</span> <span class="type">std::string</span>&amp; nomeArquivo);
+    <span class="comment">// Estrutura para análise de datasets</span>
+    <span class="keyword">struct</span> InfoDataset {
+        <span class="type">std::string</span> nomeArquivo;    <span class="comment">// Nome do arquivo</span>
+        <span class="type">size_t</span> quantidade;          <span class="comment">// Número de elementos</span>
+        <span class="type">int</span> minimo, maximo;         <span class="comment">// Faixa de valores</span>
+        <span class="type">double</span> media;               <span class="comment">// Média aritmética</span>
+        <span class="type">bool</span> temDuplicatas;         <span class="comment">// Se contém duplicatas</span>
+        <span class="type">size_t</span> numDuplicatas;       <span class="comment">// Quantidade de duplicatas</span>
+    };
+    
+    <span class="comment">// Análise e validação</span>
+    InfoDataset analisarDataset(<span class="keyword">const</span> <span class="type">std::string</span>&amp; nomeArquivo);
     <span class="type">bool</span> validarArquivo(<span class="keyword">const</span> <span class="type">std::string</span>&amp; nomeArquivo) <span class="keyword">const</span>;
-    
-    <span class="type">std::vector&lt;std::string&gt;</span> listarArquivosDisponiveis() <span class="keyword">const</span>;
     <span class="type">void</span> exibirEstatisticas(<span class="keyword">const</span> <span class="type">std::string</span>&amp; nomeArquivo) <span class="keyword">const</span>;
-};
-</code></pre></div>
+};</code></pre></div>
+                            
+                            <h4 class="text-lg font-semibold mb-3 text-gray-800">🔧 Funcionalidades Auxiliares</h4>
+                            <ul class="list-disc list-inside space-y-2 text-gray-700">
+                                <li><strong>gerarArquivosTrabalho():</strong> Cria automaticamente todos os datasets necessários (100 a 50.000)</li>
+                                <li><strong>listarArquivosDisponiveis():</strong> Escaneia pasta data/ e lista arquivos .txt encontrados</li>
+                                <li><strong>salvarEmArquivo():</strong> Persiste dados no formato padronizado do projeto</li>
+                                <li><strong>BenchmarkCarregadorDados:</strong> Classe utilitária para testar performance das operações</li>
+                            </ul>
+                        </div>
+                    </details>
+                </article>
+                
+                <!-- Implementações .cpp -->
+                <article>
+                    <details>
+                        <summary><code>src/*.cpp</code> - Arquivos de Implementação</summary>
+                        <div class="details-content">
+                            <h4 class="text-lg font-semibold mb-3 text-gray-800">📋 Visão Geral das Implementações</h4>
+                            <p class="text-gray-700 leading-relaxed mb-4">
+                                Todos os arquivos .cpp contêm implementações completas e otimizadas dos métodos definidos nos headers correspondentes. Cada implementação inclui documentação detalhada, tratamento de erros, e otimizações específicas para máxima performance nos benchmarks.
+                            </p>
+                            
+                            <h4 class="text-lg font-semibold mb-3 text-gray-800">🔍 TabelaEncadeada.cpp - Características Técnicas</h4>
+                            <ul class="list-disc list-inside space-y-2 text-gray-700 mb-4">
+                                <li><strong>Inserção otimizada:</strong> Inserção no início das listas para O(1), com verificação de duplicatas</li>
+                                <li><strong>Busca eficiente:</strong> Percorre lista sequencialmente até encontrar elemento ou nullptr</li>
+                                <li><strong>Remoção robusta:</strong> Trata casos especiais (primeiro elemento vs. meio da lista)</li>
+                                <li><strong>Estatísticas avançadas:</strong> Calcula distribuição, clustering, e colisões reais</li>
+                            </ul>
+                            
+                            <h4 class="text-lg font-semibold mb-3 text-gray-800">⚡ TabelaAberta.cpp - Aspectos de Performance</h4>
+                            <ul class="list-disc list-inside space-y-2 text-gray-700 mb-4">
+                                <li><strong>Sondagem linear otimizada:</strong> Algoritmo central que determina posições para inserção/busca</li>
+                                <li><strong>Lazy deletion inteligente:</strong> Mantém integridade da sondagem sem reorganização custosa</li>
+                                <li><strong>Análise de clustering:</strong> Detecta e mede agrupamentos primários automaticamente</li>
+                                <li><strong>Controle preventivo:</strong> Monitora fator de carga para evitar degradação severa</li>
+                            </ul>
+                            
+                            <h4 class="text-lg font-semibold mb-3 text-gray-800">📈 CarregadorDados.cpp - Robustez e Flexibilidade</h4>
+                            <ul class="list-disc list-inside space-y-2 text-gray-700 mb-4">
+                                <li><strong>Parsing inteligente:</strong> Detecta automaticamente formato do arquivo (com/sem header)</li>
+                                <li><strong>Recuperação de erros:</strong> Continua processamento mesmo com linhas corrompidas</li>
+                                <li><strong>Geração eficiente:</strong> Algoritmos otimizados para datasets grandes</li>
+                                <li><strong>Análise estatística completa:</strong> Calcula métricas descritivas usando algoritmos numericamente estáveis</li>
+                            </ul>
+                            
+                            <div class="code-block"><pre><code><span class="comment">// Exemplo: Inserção otimizada na tabela encadeada</span>
+<span class="type">void</span> TabelaEncadeada::inserir(<span class="type">int</span> valor, TipoHash tipo) {
+    <span class="comment">// 1. Calcula índice usando função hash especificada</span>
+    <span class="type">size_t</span> indice = (tipo == TipoHash::DIVISAO) 
+        ? calcularHashDivisao(valor) 
+        : calcularHashMultiplicacao(valor);
+    
+    <span class="comment">// 2. Verifica duplicatas (importante para integridade)</span>
+    <span class="keyword">if</span> (buscar(valor, tipo)) {
+        <span class="keyword">return</span>; <span class="comment">// Elemento já existe</span>
+    }
+    
+    <span class="comment">// 3. Inserção no início (O(1)) usando ponteiros inteligentes</span>
+    <span class="keyword">auto</span> novoNo = <span class="type">std::make_unique&lt;No&gt;</span>(valor);
+    novoNo-&gt;proximo = <span class="type">std::move</span>(tabela[indice]);
+    tabela[indice] = <span class="type">std::move</span>(novoNo);
+    
+    ++numElementos;
+}
+
+<span class="comment">// Exemplo: Sondagem linear na tabela aberta</span>
+<span class="type">size_t</span> TabelaAberta::sondagemLinear(<span class="type">size_t</span> indiceInicial, <span class="type">int</span> valor, <span class="type">bool</span> paraInsercao) <span class="keyword">const</span> {
+    <span class="type">size_t</span> tentativas = <span class="number">0</span>;
+    <span class="type">size_t</span> indice = indiceInicial;
+    
+    <span class="keyword">while</span> (tentativas &lt; tamanho) {
+        <span class="keyword">const</span> Celula&amp; celula = tabela[indice];
+        
+        <span class="keyword">if</span> (paraInsercao) {
+            <span class="comment">// Para inserção: aceita VAZIO ou REMOVIDO</span>
+            <span class="keyword">if</span> (celula.disponivelParaInsercao()) <span class="keyword">return</span> indice;
+        } <span class="keyword">else</span> {
+            <span class="comment">// Para busca: para em VAZIO, continua em REMOVIDO</span>
+            <span class="keyword">if</span> (celula.estado == Celula::Estado::VAZIO) <span class="keyword">return</span> tamanho;
+            <span class="keyword">if</span> (celula.estado == Celula::Estado::OCUPADO &amp;&amp; celula.valor == valor) {
+                <span class="keyword">return</span> indice;
+            }
+        }
+        
+        <span class="comment">// Avança circularmente</span>
+        indice = (indice + <span class="number">1</span>) % tamanho;
+        ++tentativas;
+    }
+    
+    <span class="keyword">return</span> tamanho; <span class="comment">// Não encontrou</span>
+}</code></pre></div>
+                            
+                            <h4 class="text-lg font-semibold mb-3 text-gray-800">🏆 Padrões de Qualidade Implementados</h4>
+                            <ul class="list-disc list-inside space-y-2 text-gray-700">
+                                <li><strong>Documentação Doxygen completa</strong> com descrições detalhadas de complexidade</li>
+                                <li><strong>Tratamento robusto de exceções</strong> com mensagens informativas</li>
+                                <li><strong>Uso consistente de C++17</strong> com smart pointers e containers STL</li>
+                                <li><strong>Otimizações de performance</strong> específicas para benchmarking</li>
+                                <li><strong>Código defensivo</strong> com validações de entrada e estados</li>
+                            </ul>
                         </div>
                     </details>
                 </article>
@@ -593,7 +753,7 @@ Aberta,50021,50000,Multiplicacao,15.178,7.741,24982,0.9996`;
             const labels = [...new Set(filteredData.map(d => d.QuantidadeDados))].sort((a,b) => a - b);
 
             const datasets = [];
-            const combinations = [...new Set(filteredData.map(d => `${d.TipoTabela}-${d.FuncaoHash}`))];
+            const combinations = [...new Set(filteredData.map(d => `${d.TipoTabela}-${d.FuncaoHash}`))];;
 
             combinations.forEach(combo => {
                 const [tipo, hash] = combo.split('-');
