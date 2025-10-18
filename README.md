@@ -1,22 +1,17 @@
 # 📋 Pesquisa e Ordenação: Análise Comparativa de Soluções Baseadas em Hashing
 
-[![C++](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](https://isocpp.org/)
-[![CMake](https://img.shields.io/badge/CMake-3.15%2B-green.svg)](https://cmake.org/)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-Live-brightgreen.svg)](https://gabriel-freitas-s.github.io/analise_hash/)
-
 ## 👤 Autores
 
-- Gabriel Freitas Souza ([GitHub](https://github.com/Gabriel-Freitas-S))
-- Roberli Schuina Silva ([GitHub](https://github.com/RoberliSchuina))
+- Gabriel Freitas Souza (GitHub)
+- Roberli Schuina Silva (GitHub)
 
 Trabalho desenvolvido em dupla para a disciplina de Pesquisa e Ordenação.
 
 ## 🔗 Links Importantes
 
 - 📊 **[Página de Análise Completa](https://gabriel-freitas-s.github.io/analise_hash/)** - Visualize gráficos interativos e análise detalhada
-- 📈 **[Resultados CSV](resultados_benchmark.csv)** - Dados brutos dos benchmarks
-- 📁 **[Código Fonte](src/)** - Implementações das tabelas hash
+- 📈 **Resultados CSV** - Dados brutos dos benchmarks
+- 📁 **Código Fonte** - Implementações das tabelas hash
 
 ## 🎯 Visão Geral
 
@@ -24,7 +19,7 @@ Este projeto, desenvolvido para a disciplina de **Pesquisa e Ordenação**, impl
 
 ### 🔍 Abordagens de Tratamento de Colisão
 
-- **🔗 Listas Encadeadas (Chaining):** Cada posição da tabela armazena uma lista encadeada com as chaves que colidiram
+- **🔗 Encadeamento (Chaining):** Cada posição da tabela armazena uma lista encadeada com as chaves que colidiram
 - **🏃 Endereçamento Aberto (Open Addressing):** Em caso de colisão, a chave é armazenada na próxima posição disponível usando sondagem linear
 
 ### 🧮 Funções de Hashing Implementadas
@@ -34,7 +29,7 @@ Este projeto, desenvolvido para a disciplina de **Pesquisa e Ordenação**, impl
    h(k) = k mod p
    ```
    onde `p` é o tamanho da tabela (preferencialmente primo)
-
+   
 2. **Método da Multiplicação:**
    ```
    h(k) = ⌊((k × c) mod 1) × p⌋
@@ -46,35 +41,36 @@ Este projeto, desenvolvido para a disciplina de **Pesquisa e Ordenação**, impl
 ```
 analise_hash/
 │
-├── 📁 include/              # Arquivos de cabeçalho (.hpp)
-│   ├── TabelaHashEncadeada.hpp    # Interface da tabela com encadeamento
-│   ├── TabelaHashAberta.hpp       # Interface da tabela com endereçamento aberto
-│   └── GeradorDados.hpp           # Interface do gerador de datasets
+├── 📁 include/                    # Arquivos de cabeçalho (.hpp)
+│   ├── TabelaEncadeada.hpp        # Interface da tabela com encadeamento
+│   ├── TabelaAberta.hpp           # Interface da tabela com endereçamento aberto
+│   └── CarregadorDados.hpp        # Interface do carregador de datasets
 │
-├── 📂 src/                 # Implementações (.cpp)
+├── 📂 src/                        # Implementações (.cpp)
 │   ├── main.cpp                   # Programa principal e benchmarks
-│   ├── TabelaHashEncadeada.cpp    # Implementação do encadeamento
-│   ├── TabelaHashAberta.cpp       # Implementação do endereçamento aberto
-│   └── GeradorDados.cpp           # Implementação do gerador
+│   ├── TabelaEncadeada.cpp        # Implementação do encadeamento
+│   ├── TabelaAberta.cpp           # Implementação do endereçamento aberto
+│   └── CarregadorDados.cpp        # Implementação do carregador
 │
-├── 📀 data/                # Datasets de teste
-│   ├── numeros_aleatorios_100.txt    # 100 números aleatórios
-│   ├── numeros_aleatorios_500.txt    # 500 números aleatórios
-│   ├── numeros_aleatorios_1000.txt   # 1.000 números aleatórios
-│   ├── numeros_aleatorios_5000.txt   # 5.000 números aleatórios
-│   ├── numeros_aleatorios_10000.txt  # 10.000 números aleatórios
-│   └── numeros_aleatorios_50000.txt  # 50.000 números aleatórios
+├── 📀 data/                       # Datasets de teste
+│   ├── numeros_aleatorios_100.txt     # 100 números aleatórios
+│   ├── numeros_aleatorios_500.txt     # 500 números aleatórios
+│   ├── numeros_aleatorios_1000.txt    # 1.000 números aleatórios
+│   ├── numeros_aleatorios_5000.txt    # 5.000 números aleatórios
+│   ├── numeros_aleatorios_10000.txt   # 10.000 números aleatórios
+│   └── numeros_aleatorios_50000.txt   # 50.000 números aleatórios
 │
-├── 📊 resultados_benchmark.csv     # Resultados dos testes (gerado automaticamente)
-├── 📄 index.html                   # Página web com análise completa
-├── ⚙️ CMakeLists.txt               # Configuração de build
-├── 📋 README.md                    # Este arquivo
-└── 🚫 .gitignore                  # Arquivos ignorados pelo Git
+├── 📊 resultados_benchmark.csv    # Resultados dos testes (gerado automaticamente)
+├── 📄 index.html                  # Página web com análise completa
+├── ⚙️ CMakeLists.txt              # Configuração de build
+├── 📋 README.md                   # Este arquivo
+└── 🚫 .gitignore                 # Arquivos ignorados pelo Git
 ```
 
 ## 🛠️ Compilação e Execução
 
 ### Pré-requisitos
+
 - **C++17** ou superior
 - **CMake 3.15+**
 - Compilador compatível (GCC, Clang, MSVC)
@@ -112,7 +108,9 @@ cmake --build .
 ## 📊 Resultados e Análise
 
 ### Arquivo CSV Gerado
+
 O programa gera automaticamente `resultados_benchmark.csv` com as seguintes colunas:
+
 - **TipoTabela:** Encadeada ou Aberta
 - **TamanhoTabela:** Tamanho da tabela utilizada
 - **QuantidadeDados:** Número de elementos inseridos
@@ -123,7 +121,9 @@ O programa gera automaticamente `resultados_benchmark.csv` com as seguintes colu
 - **FatorCarga:** Fator de carga da tabela
 
 ### Visualização Interativa
+
 Acesse a **[Página de Análise Completa](https://gabriel-freitas-s.github.io/analise_hash/)** para:
+
 - 📈 Gráficos interativos dos resultados (Chart.js)
 - 📝 Análise detalhada do código
 - 🔍 Discussão dos resultados
@@ -134,14 +134,14 @@ Acesse a **[Página de Análise Completa](https://gabriel-freitas-s.github.io/an
 ### Configurações das Tabelas
 
 | Tipo | Tamanhos Testados | Observações |
-|------|------------------|---------------|
+|------|-------------------|-------------|
 | **Encadeada** | 29, 97, 251, 499, 911 | Números primos para melhor distribuição |
 | **Aberta** | 50,009 | Tamanho fixo com sondagem linear |
 
 ### Datasets Utilizados
 
 | Arquivo | Elementos | Descrição |
-|---------|-----------|-------------|
+|---------|-----------|----------|
 | `numeros_aleatorios_100.txt` | 100 | Dataset pequeno |
 | `numeros_aleatorios_500.txt` | 500 | Dataset pequeno-médio |
 | `numeros_aleatorios_1000.txt` | 1,000 | Dataset médio |
@@ -159,19 +159,29 @@ Acesse a **[Página de Análise Completa](https://gabriel-freitas-s.github.io/an
 
 ## 🎓 Conceitos Implementados
 
-### Tabela Hash com Encadeamento
+### Tabela Hash com Encadeamento (`TabelaEncadeada`)
+
 - Lista encadeada em cada posição da tabela
 - Inserção no início da lista (O(1))
 - Busca sequencial na lista (O(n) no pior caso)
 - Sem limitação de elementos
 
-### Tabela Hash com Endereçamento Aberto
+### Tabela Hash com Endereçamento Aberto (`TabelaAberta`)
+
 - Sondagem linear para resolução de colisões
 - Lazy deletion para remoções
 - Controle automático de fator de carga
 - Análise de clustering primário
 
+### Carregador de Dados (`CarregadorDados`)
+
+- Carregamento de datasets da pasta `data/`
+- Geração de números aleatórios para testes
+- Validação de integridade dos arquivos
+- Análise estatística dos datasets
+
 ### Funções Hash
+
 - **Divisão:** Simples e rápida, boa para tamanhos primos
 - **Multiplicação:** Melhor distribuição, independente do tamanho
 
@@ -185,10 +195,10 @@ Acesse a **[Página de Análise Completa](https://gabriel-freitas-s.github.io/an
 
 ## 📄 Licença
 
-Este projeto é distribuído sob a [Licença MIT](LICENSE).
+Este projeto é distribuído sob a Licença MIT.
 
 ---
 
 **Desenvolvido para a disciplina de Pesquisa e Ordenação**  
 **Universidade:** *[Sua Universidade]*  
-**Ano:** 2025
+**Ano:** 2024
