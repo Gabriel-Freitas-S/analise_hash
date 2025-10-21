@@ -3,21 +3,20 @@
  * @brief Definição da classe CarregadorDados para gerenciamento de datasets
  * 
  * Este arquivo define a classe CarregadorDados, responsável pelo carregamento
- * de conjuntos de dados de arquivos para testes de tabelas hash. Além do
- * carregamento principal, oferece funcionalidades auxiliares como geração
- * de dados aleatórios, validação de arquivos e coleta de estatísticas.
+ * de conjuntos de dados de arquivos para testes de tabelas hash. Implementa
+ * as funcionalidades essenciais requeridas pelo Trabalho 2: carregamento
+ * de datasets e geração de dados para busca.
  * 
  * @author Gabriel Freitas Souza
  * @author Roberli Schuina Silva
  * @date 2024-10-18
- * @version 1.0
+ * @version 1.1
  * 
  * Características principais:
  * - Carregamento eficiente de datasets de arquivos de texto
- * - Geração de números aleatórios para testes complementares
+ * - Geração de números aleatórios para testes de busca
  * - Validação da integridade dos arquivos
  * - Coleta de estatísticas sobre os datasets
- * - Suporte a diferentes formatos de arquivo
  */
 
 #pragma once
@@ -37,20 +36,14 @@
 /**
  * @brief Classe CarregadorDados - Gerenciador de datasets para testes
  * 
- * Esta classe centraliza todas as operações relacionadas ao gerenciamento
- * de dados para os testes de tabelas hash. Sua função principal é carregar
- * dados de arquivos existentes, mas também oferece funcionalidades para:
+ * Esta classe centraliza as operações relacionadas ao gerenciamento
+ * de dados para os testes de tabelas hash, conforme especificado no Trabalho 2.
  * 
  * Principais responsabilidades:
  * - Carregar datasets da pasta data/
- * - Gerar dados aleatórios para testes
+ * - Gerar dados aleatórios para testes de busca (1000 números entre 1 e 1.000.000)
  * - Validar integridade de arquivos
- * - Fornecer estatísticas sobre os dados
- * - Salvar datasets gerados
- * 
- * O nome "Carregador" reflete sua função principal, que é carregar
- * dados já existentes, diferentemente de um "gerador" que criaria
- * dados do zero.
+ * - Fornecer estatísticas básicas sobre os dados
  */
 class CarregadorDados {
 private:
@@ -61,8 +54,6 @@ private:
      * @brief Verifica se um arquivo existe no sistema
      * @param nomeArquivo Caminho completo para o arquivo
      * @return true se o arquivo existe e é acessível
-     * 
-     * Utiliza std::filesystem para verificar existência de forma robusta.
      */
     bool arquivoExiste(const std::string& nomeArquivo) const {
         return std::filesystem::exists(nomeArquivo) && 
@@ -73,8 +64,6 @@ private:
      * @brief Remove espaços em branco do início e fim de uma string
      * @param str String a ser processada
      * @return String sem espaços nas extremidades
-     * 
-     * Função utilitária para limpeza de dados lidos de arquivos.
      */
     std::string trim(const std::string& str) const {
         size_t inicio = str.find_first_not_of(" \t\n\r");
@@ -88,14 +77,11 @@ public:
     /**
      * @brief Construtor do CarregadorDados
      * @param seed Semente para o gerador de números aleatórios
-     * @param minimo Valor mínimo para geração aleatória
-     * @param maximo Valor máximo para geração aleatória
+     * @param minimo Valor mínimo para geração aleatória (padrão: 1)
+     * @param maximo Valor máximo para geração aleatória (padrão: 1.000.000)
      * 
-     * Inicializa o gerador de números aleatórios com a semente especificada.
-     * Se nenhuma semente for fornecida, usa std::random_device para
-     * obter uma semente não determinística.
-     * 
-     * Parâmetros padrão cobrem uma ampla faixa de valores inteiros.
+     * Inicializa o gerador conforme especificação do Trabalho 2:
+     * números aleatórios entre 1 e 1.000.000.
      */
     explicit CarregadorDados(unsigned int seed = std::random_device{}(), 
                             int minimo = 1, 
@@ -112,13 +98,11 @@ public:
      * @return Vetor com os números carregados
      * @throws std::runtime_error se arquivo não existir ou estiver corrompido
      * 
-     * Formato esperado do arquivo:
-     * - Primeira linha: quantidade de números (opcional para validação)
+     * Formato esperado conforme Trabalho 2:
+     * - Primeira linha: quantidade de números
      * - Linhas seguintes: um número inteiro por linha
-     * - Linhas vazias e espaços são ignorados
      * 
-     * A função é robusta e tenta recuperar de pequenos problemas
-     * de formato, como espaços extras.
+     * @complexity O(n) onde n é o número de elementos no arquivo
      */
     std::vector<int> carregarDeArquivo(const std::string& nomeArquivo);
     
@@ -127,9 +111,10 @@ public:
      * @param quantidade Número de elementos a gerar
      * @return Vetor com números aleatórios sem duplicatas
      * 
-     * Gera um conjunto de números aleatórios garantindo que não
-     * há duplicatas. Utiliza std::set internamente para garantir
-     * unicidade, depois converte para vetor.
+     * Para quantidades grandes (>10.000), delega para geração com repetição
+     * por questões de performance.
+     * 
+     * @complexity O(n) amortizada
      */
     std::vector<int> gerarNumerosAleatorios(size_t quantidade);
     
@@ -138,8 +123,10 @@ public:
      * @param quantidade Número de elementos a gerar
      * @return Vetor com números aleatórios (pode conter duplicatas)
      * 
-     * Versão mais rápida que permite duplicatas. Útil para testes
-     * onde duplicatas são aceitáveis ou desejadas.
+     * Método otimizado usado para gerar os 1000 números aleatórios
+     * para busca conforme especificado no Trabalho 2.
+     * 
+     * @complexity O(n) linear
      */
     std::vector<int> gerarNumerosAleatoriosComRepeticao(size_t quantidade);
     
@@ -147,20 +134,32 @@ public:
      * @brief Salva vetor de números em arquivo de texto
      * @param numeros Vetor de números a salvar
      * @param nomeArquivo Caminho do arquivo de destino
-     * @return true se salvou com sucesso, false caso contrário
+     * @return true se salvou com sucesso
+     * 
+     * Salva no formato padronizado:
+     * - Primeira linha: quantidade
+     * - Linhas seguintes: um número por linha
+     * 
+     * @complexity O(n)
      */
     bool salvarEmArquivo(const std::vector<int>& numeros, const std::string& nomeArquivo);
     
     /**
      * @brief Valida a integridade de um arquivo de dados
      * @param nomeArquivo Caminho do arquivo a validar
-     * @return true se o arquivo é válido, false caso contrário
+     * @return true se o arquivo é válido
+     * 
+     * Verifica se o arquivo está no formato correto e é consistente.
+     * 
+     * @complexity O(n)
      */
     bool validarArquivo(const std::string& nomeArquivo) const;
     
     /**
      * @brief Lista todos os arquivos disponíveis na pasta data/
      * @return Vetor com nomes dos arquivos encontrados
+     * 
+     * Busca por arquivos .txt na pasta data/ conforme estrutura do projeto.
      */
     std::vector<std::string> listarArquivosDisponiveis() const {
         std::vector<std::string> arquivos;
@@ -182,17 +181,17 @@ public:
     /**
      * @brief Exibe estatísticas detalhadas sobre um dataset
      * @param nomeArquivo Arquivo a ser analisado
+     * 
+     * Mostra informações como quantidade, intervalo, média e duplicatas.
+     * 
+     * @complexity O(n)
      */
     void exibirEstatisticas(const std::string& nomeArquivo) const;
     
     /**
-     * @brief Gera todos os arquivos necessários para o trabalho
-     * @param diretorio Diretório de destino
-     */
-    void gerarArquivosTrabalho(const std::string& diretorio = "data");
-    
-    /**
      * @brief Estrutura com informações sobre um dataset
+     * 
+     * Contém as estatísticas básicas calculadas sobre um dataset.
      */
     struct InfoDataset {
         std::string nomeArquivo;    ///< Nome do arquivo
@@ -208,18 +207,11 @@ public:
      * @brief Analisa estatísticas completas de um arquivo
      * @param nomeArquivo Caminho do arquivo
      * @return Estrutura com as informações
+     * @throws std::runtime_error se não conseguir analisar
+     * 
+     * Calcula todas as estatísticas básicas do dataset.
+     * 
+     * @complexity O(n)
      */
     InfoDataset analisarDataset(const std::string& nomeArquivo);
-};
-
-/**
- * @brief Classe utilitária para benchmarking de carregamento de dados
- */
-class BenchmarkCarregadorDados {
-public:
-    /**
-     * @brief Testa diferentes métodos de geração e carregamento
-     * @param quantidades Tamanhos a serem testados
-     */
-    static void testarDesempenho(const std::vector<size_t>& quantidades);
 };
