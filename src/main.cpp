@@ -16,7 +16,7 @@
  * @author Gabriel Freitas Souza
  * @author Roberli Schuina Silva
  * @date 2024-10-18
- * @version 1.0
+ * @version 1.1
  * 
  * Disciplina: Pesquisa e Ordenação
  * Projeto: Análise Comparativa de Soluções Baseadas em Hashing
@@ -484,7 +484,7 @@ int main(int /*argc*/, char* /*argv*/[]) {
         // Configuração dos tamanhos de tabela encadeada (números primos)
         const std::vector<size_t> TAM_TABELA_ENCADEADA = {29, 97, 251, 499, 911};
         
-        // Lista de arquivos de dataset a serem testados
+        // Lista de arquivos de dataset conforme especificação do Trabalho 2
         const std::vector<std::string> ARQUIVOS = {
             "data/numeros_aleatorios_100.txt",
             "data/numeros_aleatorios_500.txt",
@@ -494,8 +494,8 @@ int main(int /*argc*/, char* /*argv*/[]) {
             "data/numeros_aleatorios_50000.txt"
         };
 
-        // Geração de dataset para operações de busca
-        std::cout << "\nGerando dados para busca (1000 números aleatórios)...";
+        // Geração de dataset para operações de busca (1000 números aleatórios entre 1 e 1.000.000)
+        std::cout << "\nGerando dados para busca (1000 números aleatórios entre 1 e 1.000.000)...";
         auto dadosBusca = carregador.gerarNumerosAleatoriosComRepeticao(1000);
         std::cout << " OK\n";
 
