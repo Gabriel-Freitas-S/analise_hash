@@ -10,7 +10,7 @@
  * @author Gabriel Freitas Souza
  * @author Roberli Schuina Silva
  * @date 2024-10-18
- * @version 1.0
+ * @version 1.1
  * 
  * Características principais:
  * - Utiliza std::unique_ptr para gerenciamento automático de memória
@@ -18,6 +18,7 @@
  * - Inserção no início das listas para complexidade O(1)
  * - Verificação de duplicatas antes da inserção
  * - Coleta de estatísticas de distribuição e colisões
+ * - Constante de multiplicação conforme especificação: c = 0.63274838
  */
 
 #pragma once
@@ -72,8 +73,8 @@ private:
     size_t tamanho;                             ///< Tamanho da tabela hash
     size_t numElementos;                        ///< Número total de elementos inseridos
     
-    /// Constante para o método da multiplicação (proporção áurea)
-    static constexpr double CONSTANTE_MULTIPLICACAO = 0.6180339887;
+    /// Constante para o método da multiplicação conforme especificação do trabalho
+    static constexpr double CONSTANTE_MULTIPLICACAO = 0.63274838;
     
     /**
      * @brief Verifica se um número é primo
@@ -102,7 +103,7 @@ public:
      * 
      * Define os dois métodos de hashing implementados:
      * - DIVISAO: h(k) = k mod m (método da divisão)
-     * - MULTIPLICACAO: h(k) = floor(m * ((k * A) mod 1)) (método da multiplicação)
+     * - MULTIPLICACAO: h(k) = floor(m * ((k * c) mod 1)) (método da multiplicação)
      */
     enum class TipoHash { 
         DIVISAO,        ///< Método da divisão - simples e eficiente
@@ -197,8 +198,8 @@ public:
      * @param chave Chave a ser mapeada
      * @return Índice na tabela (0 <= índice < tamanho)
      * 
-     * Implementa h(k) = k mod m, onde m é o tamanho da tabela.
-     * Funciona melhor quando m é um número primo.
+     * Implementa h(k) = k mod p, onde p é o tamanho da tabela.
+     * Funciona melhor quando p é um número primo.
      */
     size_t calcularHashDivisao(int chave) const {
         return static_cast<size_t>(std::abs(chave)) % tamanho;
@@ -209,9 +210,9 @@ public:
      * @param chave Chave a ser mapeada
      * @return Índice na tabela (0 <= índice < tamanho)
      * 
-     * Implementa h(k) = floor(m * ((k * A) mod 1)), onde:
-     * - m é o tamanho da tabela
-     * - A é a constante de multiplicação (proporção áurea)
+     * Implementa h(k) = floor(p * ((k * c) mod 1)), onde:
+     * - p é o tamanho da tabela
+     * - c = 0.63274838 (constante conforme especificação do trabalho)
      * 
      * Este método oferece melhor distribuição independentemente
      * do tamanho da tabela.
