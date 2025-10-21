@@ -9,7 +9,7 @@ Trabalho desenvolvido em dupla para a disciplina de Pesquisa e Ordenação.
 
 ## 🔗 Links Importantes
 
-- 📊 **[Página de Análise Completa](https://gabriel-freitas-s.github.io/analise_hash/)** - Visualize gráficos interativos e análise detalhada
+- 📀 **[Página de Análise Completa](https://gabriel-freitas-s.github.io/analise_hash/)** - Visualize gráficos interativos e análise detalhada
 - 📈 **Resultados CSV** - Dados brutos dos benchmarks
 - 📁 **Código Fonte** - Implementações das tabelas hash
 
@@ -34,7 +34,7 @@ Este projeto, desenvolvido para a disciplina de **Pesquisa e Ordenação**, impl
    ```
    h(k) = ⌊((k × c) mod 1) × p⌋
    ```
-   onde `c = 0.6180339887` (fração áurea)
+   onde `c = 0.63274838` (conforme especificação do trabalho)
 
 ## 📜 Estrutura do Projeto
 
@@ -60,7 +60,7 @@ analise_hash/
 │   ├── numeros_aleatorios_10000.txt   # 10.000 números aleatórios
 │   └── numeros_aleatorios_50000.txt   # 50.000 números aleatórios
 │
-├── 📊 resultados_benchmark.csv    # Resultados dos testes (gerado automaticamente)
+├── 📀 resultados_benchmark.csv    # Resultados dos testes (gerado automaticamente)
 ├── 📄 index.html                  # Página web com análise completa
 ├── ⚙️ CMakeLists.txt              # Configuração de build
 ├── 📋 README.md                   # Este arquivo
@@ -105,7 +105,7 @@ cmake --build .
 # 4. Exibir relatório no console
 ```
 
-## 📊 Resultados e Análise
+## 📀 Resultados e Análise
 
 ### Arquivo CSV Gerado
 
@@ -154,7 +154,7 @@ Acesse a **[Página de Análise Completa](https://gabriel-freitas-s.github.io/an
 - ⏱️ **Tempo de Inserção:** Medido com `std::chrono::high_resolution_clock`
 - 🔍 **Tempo de Busca:** Tempo para encontrar elementos na tabela
 - 💥 **Colisões:** Número estimado de colisões durante inserções
-- 📊 **Fator de Carga:** Razão entre elementos inseridos e tamanho da tabela
+- 📀 **Fator de Carga:** Razão entre elementos inseridos e tamanho da tabela
 - 🧮 **Clustering:** Análise de agrupamento (apenas endereçamento aberto)
 
 ## 🎓 Conceitos Implementados
