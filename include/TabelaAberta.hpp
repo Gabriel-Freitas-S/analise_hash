@@ -10,7 +10,7 @@
  * @author Gabriel Freitas Souza
  * @author Roberli Schuina Silva
  * @date 2024-10-18
- * @version 1.0
+ * @version 1.1
  * 
  * Características principais:
  * - Sondagem linear para resolução de colisões
@@ -19,6 +19,7 @@
  * - Maior eficiência de memória
  * - Melhor localidade de cache
  * - Suporte a análise de clustering
+ * - Constante de multiplicação conforme especificação: c = 0.63274838
  */
 
 #pragma once
@@ -123,8 +124,8 @@ private:
     size_t numElementos;            ///< Número de elementos ativos (não removidos)
     size_t numRemovidos;            ///< Número de elementos removidos (lazy deletion)
     
-    /// Constante para o método da multiplicação (proporção áurea)
-    static constexpr double CONSTANTE_MULTIPLICACAO = 0.6180339887;
+    /// Constante para o método da multiplicação conforme especificação do trabalho
+    static constexpr double CONSTANTE_MULTIPLICACAO = 0.63274838;
     
     /// Fator de carga máximo recomendado para manter performance
     static constexpr double MAX_FATOR_CARGA = 0.7;
@@ -153,7 +154,7 @@ public:
      * 
      * Define os dois métodos de hashing implementados:
      * - DIVISAO: h(k) = k mod m (método da divisão)
-     * - MULTIPLICACAO: h(k) = floor(m * ((k * A) mod 1)) (método da multiplicação)
+     * - MULTIPLICACAO: h(k) = floor(m * ((k * c) mod 1)) (método da multiplicação)
      */
     enum class TipoHash { 
         DIVISAO,        ///< Método da divisão - simples e eficiente
@@ -249,9 +250,9 @@ public:
      * @param chave Chave a ser mapeada
      * @return Índice na tabela (0 <= índice < tamanho)
      * 
-     * Implementa h(k) = floor(m * ((k * A) mod 1)), onde:
+     * Implementa h(k) = floor(m * ((k * c) mod 1)), onde:
      * - m é o tamanho da tabela
-     * - A é a constante de multiplicação (proporção áurea)
+     * - c = 0.63274838 (constante conforme especificação do trabalho)
      */
     size_t calcularHashMultiplicacao(int chave) const {
         double produto = std::abs(chave) * CONSTANTE_MULTIPLICACAO;
